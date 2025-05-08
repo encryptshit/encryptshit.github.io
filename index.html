@@ -11,8 +11,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="manifest" href="/manifest.json">
   <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
-  <link rel="stylesheet" href="/tailwind.min.css">
   <title>Lockara</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body {
       background: linear-gradient(180deg, #1f1f1f 0%, #141414 100%);
@@ -214,7 +214,7 @@
       <button onclick="encryptFiles()" class="mt-4 w-full bg-purple-500 text-white font-semibold py-3 rounded-lg hover:bg-purple-400 disabled:bg-gray-600 transition-colors" disabled>Encrypt Files</button>
       <div id="encrypt-actions" class="mt-4 flex gap-4 hidden">
         <button id="encrypt-download" class="flex-1 bg-teal-500 text-white font-semibold py-3 rounded-lg hover:bg-teal-400 transition-colors">Download</button>
-        <button id="encrypt-share" class="flex-1 bg-indigo-500 text-white font-semibold py-3 rounded-lg hover:bg-indigo-400 transition-colors hidden">Share</button>
+        <button id="encrypt-share" class="flex-1 bg-indigo-500 text-white font-semibold py-3 rounded-lg hover:bg-indigo-400 transition-colors">Share</button>
       </div>
       <div id="encrypt-error" class="text-red-400 text-xs mt-4 hidden" role="alert"></div>
       <div id="encrypt-progress" class="text-teal-400 text-xs mt-4" aria-live="polite"></div>
@@ -237,7 +237,7 @@
       <button onclick="decryptFile()" class="mt-4 w-full bg-purple-500 text-white font-semibold py-3 rounded-lg hover:bg-purple-400 disabled:bg-gray-600 transition-colors" disabled>Decrypt File</button>
       <div id="decrypt-actions" class="mt-4 flex gap-4 hidden">
         <button id="decrypt-download" class="flex-1 bg-teal-500 text-white font-semibold py-3 rounded-lg hover:bg-teal-400 transition-colors">Download</button>
-        <button id="decrypt-share" class="flex-1 bg-indigo-500 text-white font-semibold py-3 rounded-lg hover:bg-indigo-400 transition-colors hidden">Share</button>
+        <button id="decrypt-share" class="flex-1 bg-indigo-500 text-white font-semibold py-3 rounded-lg hover:bg-indigo-400 transition-colors">Share</button>
       </div>
       <div id="decrypt-error" class="text-red-400 text-xs mt-4 hidden" role="alert"></div>
       <div id="decrypt-progress" class="text-teal-400 text-xs mt-4" aria-live="polite"></div>
@@ -254,7 +254,6 @@
     let activeTab = 'encrypt';
     let processedBlob = null;
     let processedFileName = '';
-    const canShare = navigator.share && navigator.canShare;
 
     // Settings
     const settings = {
@@ -450,7 +449,7 @@
     setupPasswordToggle('encrypt-password', 'encrypt-password-toggle');
     setupPasswordToggle('decrypt-password', 'decrypt-password-toggle');
 
-    // Crypto Functions
+    // Crypto Functions (Unchanged)
     const getKeyMaterial = async (passwordBytes) => {
       try {
         if (!(passwordBytes instanceof Uint8Array)) throw new Error('Invalid password format.');
@@ -496,10 +495,7 @@
     };
 
     const encryptFiles = async () => {
-      if (isProcessing) {
-        showError('encrypt', 'Another operation is in progress.');
-        return;
-      }
+      if (isProcessing) return;
       const passwordInput = document.getElementById('encrypt-password');
       const passwordBytes = new TextEncoder().encode(passwordInput.value.slice(0, 128));
       passwordInput.value = '';
@@ -558,9 +554,6 @@
 
         updateProgress('encrypt', 'Encryption complete.', 100);
         document.getElementById('encrypt-actions').classList.remove('hidden');
-        if (canShare) {
-          document.getElementById('encrypt-share').classList.remove('hidden');
-        }
 
         document.getElementById('encrypt-download').onclick = () => {
           const url = URL.createObjectURL(processedBlob);
@@ -570,15 +563,19 @@
           a.click();
           URL.revokeObjectURL(url);
         };
-
         document.getElementById('encrypt-share').onclick = async () => {
           const file = new File([processedBlob], processedFileName, { type: 'application/octet-stream' });
-          if (canShare && navigator.canShare({ files: [file] })) {
+          if (navigator.share && navigator.canShare({ files: [file] })) {
             try {
               await navigator.share({ files: [file], title: 'Lockara Vault', text: 'Share your encrypted file.' });
             } catch (e) {
               showError('encrypt', 'Sharing failed.');
             }
+          } else {
+            const url = URL.createObjectURL(processedBlob);
+            await navigator.clipboard.writeText(url);
+            showError('encrypt', 'URL copied to clipboard.', 'teal-400');
+            setTimeout(() => URL.revokeObjectURL(url), 30000);
           }
         };
       } catch (e) {
@@ -593,10 +590,7 @@
     };
 
     const decryptFile = async () => {
-      if (isProcessing) {
-        showError('decrypt', 'Another operation is in progress.');
-        return;
-      }
+      if (isProcessing) return;
       const passwordInput = document.getElementById('decrypt-password');
       const passwordBytes = new TextEncoder().encode(passwordInput.value.slice(0, 128));
       passwordInput.value = '';
@@ -671,9 +665,6 @@
 
         updateProgress('decrypt', 'Decryption complete.', 100);
         document.getElementById('decrypt-actions').classList.remove('hidden');
-        if (canShare) {
-          document.getElementById('decrypt-share').classList.remove('hidden');
-        }
 
         document.getElementById('decrypt-download').onclick = () => {
           const url = URL.createObjectURL(processedBlob);
@@ -683,15 +674,19 @@
           a.click();
           URL.revokeObjectURL(url);
         };
-
         document.getElementById('decrypt-share').onclick = async () => {
           const file = new File([processedBlob], processedFileName, { type: 'application/zip' });
-          if (canShare && navigator.canShare({ files: [file] })) {
+          if (navigator.share && navigator.canShare({ files: [file] })) {
             try {
               await navigator.share({ files: [file], title: 'Lockara Decrypted Files', text: 'Share your decrypted files.' });
             } catch (e) {
               showError('decrypt', 'Sharing failed.');
             }
+          } else {
+            const url = URL.createObjectURL(processedBlob);
+            await navigator.clipboard.writeText(url);
+            showError('decrypt', 'URL copied to clipboard.', 'teal-400');
+            setTimeout(() => URL.revokeObjectURL(url), 30000);
           }
         };
       } catch (e) {
