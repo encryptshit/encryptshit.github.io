@@ -2,41 +2,56 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Securely encrypt and decrypt files locally in your browser with strong cryptography.">
-  <meta name="keywords" content="encryption, decryption, security, privacy, cryptography">
-  <meta name="author" content="Secure File Vault">
-  <!-- PWA-specific meta tags -->
-  <meta name="theme-color" content="#4B0082">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="Lockara: Secure file encryption and decryption, built for privacy.">
+  <meta name="keywords" content="encryption, decryption, security, privacy, lockara">
+  <meta name="author" content="Lockara Team">
+  <meta name="theme-color" content="#1f1f1f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="manifest" href="/manifest.json">
   <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
-  <title>Secure File Vault</title>
+  <title>Lockara</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    body {
+      background: linear-gradient(180deg, #1f1f1f 0%, #141414 100%);
+      overscroll-behavior: none;
+      touch-action: pan-y;
+    }
+    main {
+      height: 100vh;
+      width: 100vw;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
     .fade-in {
-      animation: fadeIn 0.3s ease-in;
+      animation: fadeIn 0.3s ease-out;
     }
     @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
     }
     .progress-bar {
-      height: 4px;
+      height: 3px;
       background: #a78bfa;
-      transition: width 0.2s ease;
+      transition: width 0.3s ease;
+      border-radius: 1.5px;
     }
     .tab-container {
       position: relative;
+      border-bottom: 1px solid #2d2d2d;
     }
     .tab-container::before {
       content: '';
       position: absolute;
-      bottom: 0;
+      bottom: -1px;
       left: 0;
       width: 50%;
       height: 2px;
       background: #a78bfa;
-      transition: transform 0.3s ease;
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
     .tab-container.encrypt-active::before {
       transform: translateX(0);
@@ -44,43 +59,214 @@
     .tab-container.decrypt-active::before {
       transform: translateX(100%);
     }
+    .settings-panel, .info-panel {
+      position: fixed;
+      bottom: -100%;
+      left: 0;
+      right: 0;
+      background: #1f1f1f;
+      opacity: 1;
+      border-top-left-radius: 16px;
+      border-top-right-radius: 16px;
+      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.3);
+      max-h-[80vh];
+      overflow-y: auto;
+      transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 1000;
+    }
+    .settings-panel.open, .info-panel.open {
+      bottom: 0;
+    }
+    .panel-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+      display: none;
+      z-index: 999;
+    }
+    .panel-backdrop.open {
+      display: block;
+    }
+    .slider::-webkit-slider-thumb {
+      background: #a78bfa;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+      border-radius: 50%;
+      box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+    }
+    .slider::-webkit-slider-thumb:hover, .slider::-webkit-slider-thumb:active {
+      transform: scale(1.2);
+    }
+    .slider::-moz-range-thumb {
+      background: #a78bfa;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+      border-radius: 50%;
+      box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+    }
+    .slider::-moz-range-thumb:hover, .slider::-moz-range-thumb:active {
+      transform: scale(1.2);
+    }
+    .close-btn {
+      padding: 8px;
+      transition: transform 0.2s ease, color 0.2s ease;
+    }
+    .close-btn:hover, .close-btn:active {
+      transform: scale(1.1);
+      color: #e879f9;
+    }
+    .input-container {
+      position: relative;
+    }
+    .toggle-password {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      color: #a78bfa;
+      transition: color 0.2s ease, transform 0.2s ease;
+    }
+    .toggle-password:hover, .toggle-password:active {
+      color: #e879f9;
+      transform: translateY(-50%) scale(1.1);
+    }
+    .error-pulse {
+      animation: pulse 0.5s ease-in-out 2;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    button {
+      transition: transform 0.1s ease, background-color 0.2s ease;
+    }
+    button:active:not(:disabled) {
+      transform: scale(0.95);
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .file-drop {
+      touch-action: none;
+    }
+    .transitioning {
+      pointer-events: none;
+    }
   </style>
 </head>
-<body class="bg-gray-900 text-gray-100 min-h-screen flex items-center justify-center p-4 font-sans">
-  <main class="w-full max-w-lg bg-gray-800 rounded-xl shadow-xl p-6">
-    <div class="tab-container encrypt-active flex border-b border-gray-700">
-      <button id="encrypt-tab" class="flex-1 py-3 text-center text-sm font-medium text-purple-400" onclick="switchTab('encrypt')" aria-selected="true">
-        Encrypt
-      </button>
-      <button id="decrypt-tab" class="flex-1 py-3 text-center text-sm font-medium text-gray-400 hover:text-purple-400" onclick="switchTab('decrypt')" aria-selected="false">
-        Decrypt
-      </button>
+<body class="text-gray-100 font-sans">
+  <main class="flex-1">
+    <!-- Header -->
+    <header class="flex justify-between items-center p-4 bg-[#1f1f1f] border-b border-[#2d2d2d]">
+      <h1 class="text-xl font-bold text-purple-400">Lockara</h1>
+      <div class="flex gap-2">
+        <button id="settings-toggle" class="text-purple-400 hover:text-purple-300 p-2 rounded-full transition-colors" aria-label="Open settings">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37zM15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+        </button>
+        <button id="info-toggle" class="text-purple-400 hover:text-purple-300 p-2 rounded-full transition-colors" aria-label="Open info">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Panel Backdrop -->
+    <div id="panel-backdrop" class="panel-backdrop"></div>
+
+    <!-- Settings Panel (Bottom Sheet) -->
+    <div id="settings-panel" class="settings-panel p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-semibold text-purple-400">Settings</h2>
+        <button id="settings-close" class="close-btn text-gray-400 hover:text-purple-300" aria-label="Close settings">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+      <div class="mb-6">
+        <label for="pbkdf2-iterations" class="block text-sm text-gray-300 mb-2">PBKDF2 Iterations</label>
+        <input type="range" id="pbkdf2-iterations" min="1000000" max="2000000" value="1000000" step="10000" class="slider w-full accent-purple-500">
+        <div class="flex justify-between text-sm text-gray-400 mt-1">
+          <span>1,000,000</span>
+          <span id="iterations-value">1,000,000</span>
+          <span>2,000,000</span>
+        </div>
+        <p class="text-xs text-gray-500 mt-1">Higher values increase security but slow down encryption.</p>
+      </div>
+      <button id="save-settings" class="w-full bg-purple-500 text-white font-semibold py-3 rounded-lg hover:bg-purple-400 transition-colors">Save</button>
     </div>
 
-    <section id="encrypt-section" class="mt-6 fade-in">
-      <div id="encrypt-box" class="border-2 border-dashed border-purple-400 p-6 rounded-lg cursor-pointer hover:border-purple-300 bg-gray-700 transition-colors text-center" role="button" aria-label="Drag files here or click to select" tabindex="0">
-        <p class="text-gray-300">Drag files here or click to select</p>
+    <!-- Info Panel (Bottom Sheet) -->
+    <div id="info-panel" class="info-panel p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-semibold text-purple-400">Info</h2>
+        <button id="info-close" class="close-btn text-gray-400 hover:text-purple-300" aria-label="Close info">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+      <div class="space-y-4">
+        <p class="text-sm text-gray-300">Lockara encrypts files in your browser. Use strong passwords (12+ characters, mix of letters, numbers, symbols) and verify the URL to avoid phishing.</p>
+        <a href="https://lockara.com/about" target="_blank" rel="noopener noreferrer" class="block text-purple-400 hover:text-purple-300 text-sm font-medium transition-colors">About Us</a>
+        <a href="https://lockara.com/contact" target="_blank" rel="noopener noreferrer" class="block text-purple-400 hover:text-purple-300 text-sm font-medium transition-colors">Contact Us</a>
+        <p class="text-xs text-gray-400">© 2025 Lockara Team. All rights reserved.</p>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tab-container flex">
+      <button id="encrypt-tab" class="flex-1 py-4 text-center text-sm font-medium text-purple-400 transition-colors" onclick="switchTab('encrypt')" aria-selected="true">Encrypt</button>
+      <button id="decrypt-tab" class="flex-1 py-4 text-center text-sm font-medium text-gray-400 hover:text-purple-400 transition-colors" onclick="switchTab('decrypt')" aria-selected="false">Decrypt</button>
+    </div>
+
+    <!-- Encrypt Section -->
+    <section id="encrypt-section" class="flex-1 p-4 fade-in overflow-y-auto">
+      <div id="encrypt-box" class="file-drop bg-[#2d2d2d] p-6 rounded-lg text-center" role="button" aria-label="Drag files here or tap to select" tabindex="0">
+        <p class="text-gray-300">Drag files or tap to select</p>
         <input type="file" id="encryptInput" multiple class="hidden">
-        <p id="encrypt-files-count" class="text-sm text-gray-400 mt-2">No files selected</p>
+        <p id="encrypt-files-count" class="text-xs text-gray-400 mt-2">No files selected</p>
       </div>
-      <input type="password" id="encrypt-password" placeholder="Enter password" class="mt-4 w-full p-3 bg-gray-700 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-400" aria-label="Encryption password" maxlength="128">
-      <div id="encrypt-password-strength" class="text-sm mt-2 text-gray-400"></div>
-      <button onclick="encryptFiles()" class="mt-4 w-full bg-purple-500 text-white font-semibold py-3 rounded-lg hover:bg-purple-400 disabled:bg-gray-600 disabled:cursor-not-allowed" disabled>Encrypt Files</button>
+      <div class="input-container mt-4">
+        <input type="password" id="encrypt-password" placeholder="Enter password (12+ characters)" class="w-full p-3 bg-[#2d2d2d] rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-400 transition-shadow" aria-label="Encryption password" maxlength="128" autocomplete="new-password">
+        <span id="encrypt-password-toggle" class="toggle-password" aria-label="Toggle password visibility">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+        </span>
+      </div>
+      <div id="encrypt-password-strength" class="text-xs text-gray-400 mt-2"></div>
+      <button onclick="encryptFiles()" class="mt-4 w-full bg-purple-500 text-white font-semibold py-3 rounded-lg hover:bg-purple-400 disabled:bg-gray-600 transition-colors" disabled>Encrypt Files</button>
+      <div id="encrypt-actions" class="mt-4 flex gap-4 hidden">
+        <button id="encrypt-download" class="flex-1 bg-teal-500 text-white font-semibold py-3 rounded-lg hover:bg-teal-400 transition-colors">Download</button>
+        <button id="encrypt-share" class="flex-1 bg-indigo-500 text-white font-semibold py-3 rounded-lg hover:bg-indigo-400 transition-colors hidden" disabled>Share</button>
+      </div>
+      <div id="encrypt-error" class="text-red-400 text-xs mt-4 hidden" role="alert"></div>
+      <div id="encrypt-progress" class="text-teal-400 text-xs mt-4" aria-live="polite"></div>
+      <div id="encrypt-progress-bar" class="progress-bar w-0 mt-2"></div>
     </section>
 
-    <section id="decrypt-section" class="mt-6 hidden fade-in">
-      <div id="decrypt-box" class="border-2 border-dashed border-purple-400 p-6 rounded-lg cursor-pointer hover:border-purple-300 bg-gray-700 transition-colors text-center" role="button" aria-label="Drag .vault file here or click to select" tabindex="0">
-        <p class="text-gray-300">Drag .vault file here or click</p>
-        <input type="file" id="decryptInput" accept=".vault" class="hidden">
-        <p id="decrypt-file-name" class="text-sm text-gray-400 mt-2">No file selected</p>
+    <!-- Decrypt Section -->
+    <section id="decrypt-section" class="flex-1 p-4 hidden fade-in overflow-y-auto">
+      <div id="decrypt-box" class="file-drop bg-[#2d2d2d] p-6 rounded-lg text-center" role="button" aria-label="Drag .ara file here or tap to select" tabindex="0">
+        <p class="text-gray-300">Drag .ara file or tap</p>
+        <input type="file" id="decryptInput" accept=".ara" class="hidden">
+        <p id="decrypt-file-name" class="text-xs text-gray-400 mt-2">No file selected</p>
       </div>
-      <input type="password" id="decrypt-password" placeholder="Enter password" class="mt-4 w-full p-3 bg-gray-700 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-400" aria-label="Decryption password" maxlength="128">
-      <button onclick="decryptFile()" class="mt-4 w-full bg-purple-500 text-white font-semibold py-3 rounded-lg hover:bg-purple-400 disabled:bg-gray-600 disabled:cursor-not-allowed" disabled>Decrypt File</button>
+      <div class="input-container mt-4">
+        <input type="password" id="decrypt-password" placeholder="Enter password" class="w-full p-3 bg-[#2d2d2d] rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-400 transition-shadow" aria-label="Decryption password" maxlength="128" autocomplete="new-password">
+        <span id="decrypt-password-toggle" class="toggle-password" aria-label="Toggle password visibility">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+        </span>
+      </div>
+      <button onclick="decryptFile()" class="mt-4 w-full bg-purple-500 text-white font-semibold py-3 rounded-lg hover:bg-purple-400 disabled:bg-gray-600 transition-colors" disabled>Decrypt File</button>
+      <div id="decrypt-actions" class="mt-4 flex gap-4 hidden">
+        <button id="decrypt-download" class="flex-1 bg-teal-500 text-white font-semibold py-3 rounded-lg hover:bg-teal-400 transition-colors">Download</button>
+        <button id="decrypt-share" class="flex-1 bg-indigo-500 text-white font-semibold py-3 rounded-lg hover:bg-indigo-400 transition-colors hidden" disabled>Share</button>
+      </div>
+      <div id="decrypt-error" class="text-red-400 text-xs mt-4 hidden" role="alert"></div>
+      <div id="decrypt-progress" class="text-teal-400 text-xs mt-4" aria-live="polite"></div>
+      <div id="decrypt-progress-bar" class="progress-bar w-0 mt-2"></div>
     </section>
-
-    <div id="error" class="text-red-400 text-sm mt-4 hidden" role="alert"></div>
-    <div id="progress" class="text-teal-400 text-sm mt-4" aria-live="polite"></div>
-    <div id="progress-bar" class="progress-bar w-0 mt-2"></div>
   </main>
 
   <script src="jszip.min.js"></script>
@@ -90,44 +276,63 @@
     let selectedDecryptFile = null;
     let isProcessing = false;
     let activeTab = 'encrypt';
+    let processedBlob = null;
+    let processedFileName = '';
+
+    // Settings
+    const settings = {
+      pbkdf2Iterations: parseInt(localStorage.getItem('pbkdf2Iterations')) || 1000000
+    };
+
+    // Constants
+    const FILE_FORMAT_VERSION = 'LARA';
+    const SALT_LENGTH = 32;
+    const NONCE_LENGTH = 12;
+    const HMAC_LENGTH = 32;
+    const HEADER_LENGTH = 4 + 4 + SALT_LENGTH + NONCE_LENGTH;
 
     // Utility Functions
-    function showError(message) {
-      const errorDiv = document.getElementById('error');
+    const showError = (section, message, color = 'red-400') => {
+      const errorDiv = document.getElementById(`${section}-error`);
       errorDiv.textContent = message;
+      errorDiv.className = `text-xs mt-4 text-${color} error-pulse`;
       errorDiv.classList.remove('hidden');
       setTimeout(() => errorDiv.classList.add('hidden'), 5000);
-    }
+    };
 
-    function updateProgress(message, percent = 0) {
-      const progressDiv = document.getElementById('progress');
-      const progressBar = document.getElementById('progress-bar');
-      progressDiv.textContent = message;
-      progressBar.style.width = `${percent}%`;
-    }
+    const updateProgress = (section, message, percent = 0) => {
+      document.getElementById(`${section}-progress`).textContent = message;
+      document.getElementById(`${section}-progress-bar`).style.width = `${percent}%`;
+    };
 
-    function toggleProcessing(state) {
+    const toggleProcessing = (state) => {
       isProcessing = state;
-      document.querySelectorAll('button').forEach(btn => (btn.disabled = state));
+      document.querySelectorAll('button:not(#settings-close):not(#info-close):not(#save-settings)').forEach(btn => btn.disabled = state);
       document.querySelectorAll('#encrypt-box, #decrypt-box').forEach(box => box.setAttribute('aria-disabled', state));
-    }
+    };
 
-    function estimatePasswordStrength(password) {
+    const estimatePasswordStrength = (password) => {
+      if (!password) return { strength: 'empty', message: '' };
       const length = password.length;
       const hasLetter = /[a-zA-Z]/.test(password);
       const hasNumber = /\d/.test(password);
       const hasSymbol = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-      let entropy = 0;
-      if (hasLetter) entropy += 52;
-      if (hasNumber) entropy += 10;
-      if (hasSymbol) entropy += 33;
+      let entropy = (hasLetter ? 52 : 0) + (hasNumber ? 10 : 0) + (hasSymbol ? 33 : 0);
       const score = length * Math.log2(entropy || 1);
-      if (score < 40) return { strength: 'weak', message: 'Password is weak. Consider adding more characters or variety.' };
-      if (score < 80) return { strength: 'medium', message: 'Password is moderate. Longer passwords are stronger.' };
-      return { strength: 'strong', message: 'Password is strong.' };
-    }
+      if (score < 40) return { strength: 'weak', message: 'Weak: Use 12+ characters with letters, numbers, symbols.' };
+      if (score < 80) return { strength: 'medium', message: 'Moderate: Add more characters or symbols.' };
+      return { strength: 'strong', message: 'Strong: Good password!' };
+    };
 
-    function switchTab(tab) {
+    const secureWipe = (array) => {
+      if (array instanceof Uint8Array) {
+        crypto.getRandomValues(array);
+        array.fill(0);
+      }
+    };
+
+    // UI Event Handlers
+    const switchTab = (tab) => {
       if (isProcessing) return;
       activeTab = tab;
       const encryptTab = document.getElementById('encrypt-tab');
@@ -135,334 +340,428 @@
       const encryptSection = document.getElementById('encrypt-section');
       const decryptSection = document.getElementById('decrypt-section');
       const tabContainer = document.querySelector('.tab-container');
+      const settingsToggle = document.getElementById('settings-toggle');
 
-      if (tab === 'encrypt') {
-        encryptTab.classList.add('text-purple-400');
-        encryptTab.classList.remove('text-gray-400');
-        decryptTab.classList.add('text-gray-400');
-        decryptTab.classList.remove('text-purple-400');
-        encryptSection.classList.remove('hidden');
-        decryptSection.classList.add('hidden');
-        tabContainer.classList.add('encrypt-active');
-        tabContainer.classList.remove('decrypt-active');
-        encryptTab.setAttribute('aria-selected', 'true');
-        decryptTab.setAttribute('aria-selected', 'false');
+      encryptTab.classList.toggle('text-purple-400', tab === 'encrypt');
+      encryptTab.classList.toggle('text-gray-400', tab !== 'encrypt');
+      decryptTab.classList.toggle('text-purple-400', tab === 'decrypt');
+      decryptTab.classList.toggle('text-gray-400', tab !== 'decrypt');
+      encryptSection.classList.toggle('hidden', tab !== 'encrypt');
+      decryptSection.classList.toggle('hidden', tab !== 'decrypt');
+      tabContainer.classList.toggle('encrypt-active', tab === 'encrypt');
+      tabContainer.classList.toggle('decrypt-active', tab === 'decrypt');
+      encryptTab.setAttribute('aria-selected', tab === 'encrypt');
+      decryptTab.setAttribute('aria-selected', tab === 'decrypt');
+      settingsToggle.classList.toggle('hidden', tab !== 'encrypt');
+      document.getElementById('settings-panel').style.display = 'none';
+      document.getElementById('info-panel').style.display = 'none';
+      document.getElementById('panel-backdrop').classList.remove('open');
+      document.getElementById('encrypt-actions').classList.add('hidden');
+      document.getElementById('decrypt-actions').classList.add('hidden');
+    };
+
+    const togglePanel = (panelId) => {
+      const settingsPanel = document.getElementById('settings-panel');
+      const infoPanel = document.getElementById('info-panel');
+      const backdrop = document.getElementById('panel-backdrop');
+      const isSettings = panelId === 'settings-panel';
+      const panel = isSettings ? settingsPanel : infoPanel;
+      const otherPanel = isSettings ? infoPanel : settingsPanel;
+      const isOpen = panel.style.display === 'block';
+
+      if (isOpen) {
+        panel.classList.add('transitioning');
+        backdrop.classList.remove('open');
+        panel.style.display = 'none';
+        panel.classList.remove('open');
+        setTimeout(() => panel.classList.remove('transitioning'), 300);
       } else {
-        decryptTab.classList.add('text-purple-400');
-        decryptTab.classList.remove('text-gray-400');
-        encryptTab.classList.add('text-gray-400');
-        encryptTab.classList.remove('text-purple-400');
-        decryptSection.classList.remove('hidden');
-        encryptSection.classList.add('hidden');
-        tabContainer.classList.add('decrypt-active');
-        tabContainer.classList.remove('encrypt-active');
-        decryptTab.setAttribute('aria-selected', 'true');
-        encryptTab.setAttribute('aria-selected', 'false');
+        panel.classList.add('transitioning');
+        otherPanel.style.display = 'none';
+        otherPanel.classList.remove('open');
+        panel.style.display = 'block';
+        backdrop.classList.add('open');
+        panel.classList.add('open');
+        setTimeout(() => panel.classList.remove('transitioning'), 300);
       }
-    }
+    };
 
-    // Password Strength Indicator
-    document.getElementById('encrypt-password').addEventListener('input', e => {
-      const password = e.target.value;
-      const strengthDiv = document.getElementById('encrypt-password-strength');
-      const { strength, message } = estimatePasswordStrength(password);
-      strengthDiv.textContent = message;
-      strengthDiv.className = `text-sm mt-2 ${strength === 'weak' ? 'text-red-400' : strength === 'medium' ? 'text-yellow-400' : 'text-teal-400'}`;
-      document.querySelector('#encrypt-section button').disabled = !selectedEncryptFiles.length;
-    });
-
-    // File Input Handlers
     const setupFileInput = (boxId, inputId, countId, isDecrypt = false) => {
       const box = document.getElementById(boxId);
       const input = document.getElementById(inputId);
       const count = document.getElementById(countId);
 
-      box.addEventListener('click', () => !isProcessing && input.click());
-      box.addEventListener('keydown', e => {
-        if ((e.key === 'Enter' || e.key === ' ') && !isProcessing) input.click();
-      });
+      const handleFiles = (files) => {
+        if (isProcessing) return;
+        if (isDecrypt) {
+          selectedDecryptFile = files[0];
+          if (!selectedDecryptFile?.name.endsWith('.ara')) {
+            showError('decrypt', 'Please select a .ara file.');
+            selectedDecryptFile = null;
+            count.textContent = 'No file selected';
+            return;
+          }
+          count.textContent = selectedDecryptFile.name;
+          document.querySelector('#decrypt-section button').disabled = !selectedDecryptFile || !document.getElementById('decrypt-password').value;
+        } else {
+          selectedEncryptFiles = Array.from(files);
+          count.textContent = selectedEncryptFiles.length ? `${selectedEncryptFiles.length} file(s)` : 'No files selected';
+          document.querySelector('#encrypt-section button').disabled = !selectedEncryptFiles.length;
+        }
+      };
+
+      box.addEventListener('click', () => !isProcessing && input.click(), { passive: true });
+      box.addEventListener('keydown', e => (e.key === 'Enter' || e.key === ' ') && !isProcessing && input.click(), { passive: true });
       box.addEventListener('dragover', e => {
         e.preventDefault();
-        if (!isProcessing) box.classList.add('border-purple-300');
-      });
+        if (!isProcessing) box.classList.add('bg-[#3d3d3d]');
+      }, { passive: true });
       box.addEventListener('dragleave', e => {
         e.preventDefault();
-        box.classList.remove('border-purple-300');
-      });
+        box.classList.remove('bg-[#3d3d3d]');
+      }, { passive: true });
       box.addEventListener('drop', e => {
         e.preventDefault();
-        if (isProcessing) return;
-        box.classList.remove('border-purple-300');
-        if (isDecrypt) {
-          selectedDecryptFile = e.dataTransfer.files[0];
-          if (!selectedDecryptFile?.name.endsWith('.vault')) {
-            showError('Please select a .vault file.');
-            selectedDecryptFile = null;
-            count.textContent = 'No file selected';
-            return;
-          }
-          count.textContent = selectedDecryptFile.name;
-          document.querySelector('#decrypt-section button').disabled = !selectedDecryptFile || !document.getElementById('decrypt-password').value;
-        } else {
-          selectedEncryptFiles = Array.from(e.dataTransfer.files);
-          count.textContent = selectedEncryptFiles.length ? `${selectedEncryptFiles.length} file(s) selected` : 'No files selected';
-          document.querySelector('#encrypt-section button').disabled = !selectedEncryptFiles.length;
-        }
-      });
-      input.addEventListener('change', e => {
-        if (isDecrypt) {
-          selectedDecryptFile = e.target.files[0];
-          if (!selectedDecryptFile?.name.endsWith('.vault')) {
-            showError('Please select a .vault file.');
-            selectedDecryptFile = null;
-            count.textContent = 'No file selected';
-            return;
-          }
-          count.textContent = selectedDecryptFile.name;
-          document.querySelector('#decrypt-section button').disabled = !selectedDecryptFile || !document.getElementById('decrypt-password').value;
-        } else {
-          selectedEncryptFiles = Array.from(e.target.files);
-          count.textContent = selectedEncryptFiles.length ? `${selectedEncryptFiles.length} file(s) selected` : 'No files selected';
-          document.querySelector('#encrypt-section button').disabled = !selectedEncryptFiles.length;
-        }
-      });
+        box.classList.remove('bg-[#3d3d3d]');
+        handleFiles(e.dataTransfer.files);
+      }, { passive: false });
+      input.addEventListener('change', e => handleFiles(e.target.files), { passive: true });
     };
 
-    setupFileInput('encrypt-box', 'encryptInput', 'encrypt-files-count');
-    setupFileInput('decrypt-box', 'decryptInput', 'decrypt-file-name', true);
+    const setupPasswordToggle = (inputId, toggleId) => {
+      const input = document.getElementById(inputId);
+      const toggle = document.getElementById(toggleId);
+      toggle.addEventListener('click', () => {
+        const isHidden = input.type === 'password';
+        input.type = isHidden ? 'text' : 'password';
+        toggle.innerHTML = isHidden
+          ? `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path></svg>`
+          : `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>`;
+      }, { passive: true });
+    };
+
+    // Initialize UI
+    document.getElementById('settings-toggle').addEventListener('click', () => togglePanel('settings-panel'), { passive: true });
+    document.getElementById('settings-close').addEventListener('click', () => togglePanel('settings-panel'), { passive: true });
+    document.getElementById('info-toggle').addEventListener('click', () => togglePanel('info-panel'), { passive: true });
+    document.getElementById('info-close').addEventListener('click', () => togglePanel('info-panel'), { passive: true });
+    document.getElementById('panel-backdrop').addEventListener('click', () => {
+      document.getElementById('settings-panel').style.display = 'none';
+      document.getElementById('info-panel').style.display = 'none';
+      document.getElementById('panel-backdrop').classList.remove('open');
+    }, { passive: true });
+    const iterationsSlider = document.getElementById('pbkdf2-iterations');
+    const iterationsValue = document.getElementById('iterations-value');
+    iterationsSlider.value = settings.pbkdf2Iterations;
+    iterationsValue.textContent = settings.pbkdf2Iterations.toLocaleString();
+    iterationsSlider.addEventListener('input', () => {
+      const value = parseInt(iterationsSlider.value);
+      if (value >= 1000000 && value <= 2000000) {
+        iterationsValue.textContent = value.toLocaleString();
+      }
+    }, { passive: true });
+    document.getElementById('save-settings').addEventListener('click', () => {
+      const iterations = parseInt(iterationsSlider.value);
+      if (iterations < 1000000 || iterations > 2000000) {
+        showError('encrypt', 'Invalid iteration count.');
+        return;
+      }
+      settings.pbkdf2Iterations = iterations;
+      localStorage.setItem('pbkdf2Iterations', iterations);
+      showError('encrypt', 'Settings saved.', 'teal-400');
+      togglePanel('settings-panel');
+    }, { passive: true });
+
+    document.getElementById('encrypt-password').addEventListener('input', e => {
+      const { strength, message } = estimatePasswordStrength(e.target.value);
+      const strengthDiv = document.getElementById('encrypt-password-strength');
+      strengthDiv.textContent = message;
+      strengthDiv.className = `text-xs mt-2 ${strength === 'weak' ? 'text-red-400' : strength === 'medium' ? 'text-yellow-400' : strength === 'strong' ? 'text-teal-400' : 'text-gray-400'}`;
+      document.querySelector('#encrypt-section button').disabled = !selectedEncryptFiles.length;
+    }, { passive: true });
 
     document.getElementById('decrypt-password').addEventListener('input', e => {
       document.querySelector('#decrypt-section button').disabled = !selectedDecryptFile || !e.target.value;
-    });
+    }, { passive: true });
 
-    // Crypto Utilities
-    const FILE_FORMAT_VERSION = 'SV2';
-    const SALT_LENGTH = 32;
-    const IV_LENGTH = 12;
-    const HMAC_LENGTH = 64;
+    setupFileInput('encrypt-box', 'encryptInput', 'encrypt-files-count');
+    setupFileInput('decrypt-box', 'decryptInput', 'decrypt-file-name', true);
+    setupPasswordToggle('encrypt-password', 'encrypt-password-toggle');
+    setupPasswordToggle('decrypt-password', 'decrypt-password-toggle');
 
-    async function getKeyMaterial(passwordBytes) {
-      const keyMaterial = await crypto.subtle.importKey('raw', passwordBytes, 'PBKDF2', false, ['deriveBits', 'deriveKey']);
-      secureWipe(passwordBytes);
-      return keyMaterial;
+    // Check Share Availability
+    const canShare = navigator.share && navigator.canShare;
+    if (canShare) {
+      document.getElementById('encrypt-share').classList.remove('hidden');
+      document.getElementById('decrypt-share').classList.remove('hidden');
+      document.getElementById('encrypt-share').disabled = false;
+      document.getElementById('decrypt-share').disabled = false;
     }
 
-    async function deriveKeys(keyMaterial, salt) {
-      const encKey = await crypto.subtle.deriveKey(
-        { name: 'PBKDF2', salt, iterations: 1500000, hash: 'SHA-512' },
-        keyMaterial,
-        { name: 'AES-GCM', length: 256 },
-        false,
-        ['encrypt', 'decrypt']
-      );
-      const hmacKey = await crypto.subtle.deriveKey(
-        { name: 'PBKDF2', salt: new Uint8Array([...salt, 1]), iterations: 1500000, hash: 'SHA-512' },
-        keyMaterial,
-        { name: 'HMAC', hash: 'SHA-512', length: 512 },
-        false,
-        ['sign', 'verify']
-      );
-      return { encKey, hmacKey };
-    }
-
-    async function computeHMAC(key, data) {
-      const hmac = new Uint8Array(await crypto.subtle.sign('HMAC', key, data));
-      return hmac;
-    }
-
-    async function verifyHMAC(key, data, signature) {
-      return await crypto.subtle.verify('HMAC', key, signature, data);
-    }
-
-    function secureWipe(array) {
-      if (array instanceof Uint8Array) {
-        array.fill(0);
+    // Crypto Functions
+    const getKeyMaterial = async (passwordBytes) => {
+      try {
+        if (!(passwordBytes instanceof Uint8Array)) throw new Error('Invalid password format.');
+        const keyMaterial = await crypto.subtle.importKey('raw', passwordBytes, 'PBKDF2', false, ['deriveBits', 'deriveKey']);
+        secureWipe(passwordBytes);
+        return keyMaterial;
+      } catch (e) {
+        throw new Error('Key import failed.');
       }
-    }
+    };
 
-    async function encryptFiles() {
+    const deriveKeys = async (keyMaterial, salt) => {
+      try {
+        if (!(salt instanceof Uint8Array) || salt.length !== SALT_LENGTH) throw new Error('Invalid salt.');
+        const encKey = await crypto.subtle.deriveKey(
+          { name: 'PBKDF2', salt, iterations: settings.pbkdf2Iterations, hash: 'SHA-256' },
+          keyMaterial,
+          { name: 'AES-GCM', length: 256 },
+          false,
+          ['encrypt', 'decrypt']
+        );
+        const hmacKey = await crypto.subtle.deriveKey(
+          { name: 'PBKDF2', salt: new Uint8Array([...salt, 1]), iterations: settings.pbkdf2Iterations, hash: 'SHA-256' },
+          keyMaterial,
+          { name: 'HMAC', hash: 'SHA-256', length: 256 },
+          false,
+          ['sign', 'verify']
+        );
+        return { encKey, hmacKey };
+      } catch (e) {
+        throw new Error('Key derivation failed.');
+      }
+    };
+
+    const computeHMAC = async (key, data) => {
+      if (!(data instanceof Uint8Array)) throw new Error('Invalid data for HMAC.');
+      return new Uint8Array(await crypto.subtle.sign('HMAC', key, data));
+    };
+
+    const verifyHMAC = async (key, data, signature) => {
+      if (!(data instanceof Uint8Array) || !(signature instanceof Uint8Array)) throw new Error('Invalid HMAC inputs.');
+      return await crypto.subtle.verify('HMAC', key, signature, data);
+    };
+
+    const encryptFiles = async () => {
       if (isProcessing) return;
       const passwordInput = document.getElementById('encrypt-password');
-      const passwordBytes = new TextEncoder().encode(passwordInput.value);
-      passwordInput.value = ''; // Clear input immediately
+      const password = passwordInput.value;
+      if (password.length > 128) {
+        showError('encrypt', 'Password must be 128 characters or less.');
+        return;
+      }
+      const passwordBytes = new TextEncoder().encode(password);
+      passwordInput.value = '';
       if (!selectedEncryptFiles.length) {
         secureWipe(passwordBytes);
-        showError('Please select at least one file.');
+        showError('encrypt', 'Please select at least one file.');
         return;
       }
       if (!passwordBytes.length) {
         secureWipe(passwordBytes);
-        showError('Please enter a password.');
+        showError('encrypt', 'Please enter a password.');
         return;
       }
 
       toggleProcessing(true);
-      updateProgress('Creating archive...', 10);
+      updateProgress('encrypt', 'Creating archive...', 10);
 
       try {
         const zip = new JSZip();
         selectedEncryptFiles.forEach(file => zip.file(file.name, file));
-        const zipped = await zip.generateAsync({ type: 'uint8array' }, metadata => {
-          updateProgress(`Archiving: ${Math.round(metadata.percent)}%`, 10 + metadata.percent * 0.3);
+        const zipped = await zip.generateAsync({ type: 'uint8array' }, ({ percent }) => {
+          updateProgress('encrypt', `Archiving: ${Math.round(percent)}%`, 10 + percent * 0.3);
         });
 
-        updateProgress('Encrypting...', 40);
+        updateProgress('encrypt', 'Encrypting...', 40);
         const keyMaterial = await getKeyMaterial(passwordBytes);
         const salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH));
-        const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
+        const nonce = crypto.getRandomValues(new Uint8Array(NONCE_LENGTH));
         const { encKey, hmacKey } = await deriveKeys(keyMaterial, salt);
 
-        const encrypted = await crypto.subtle.encrypt(
-          { name: 'AES-GCM', iv },
-          encKey,
-          zipped
-        );
-
-        updateProgress('Computing integrity...', 80);
+        const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce }, encKey, zipped);
+        updateProgress('encrypt', 'Computing integrity...', 80);
         const encData = new Uint8Array(encrypted);
         const hmac = await computeHMAC(hmacKey, encData);
 
-        updateProgress('Finalizing...', 90);
+        updateProgress('encrypt', 'Finalizing...', 90);
         const header = new TextEncoder().encode(FILE_FORMAT_VERSION);
-        const full = new Uint8Array(header.length + SALT_LENGTH + IV_LENGTH + encData.length + HMAC_LENGTH);
+        const iterations = new Uint8Array(4);
+        new DataView(iterations.buffer).setUint32(0, settings.pbkdf2Iterations, false);
+        const full = new Uint8Array(HEADER_LENGTH + encData.length + HMAC_LENGTH);
         full.set(header, 0);
-        full.set(salt, header.length);
-        full.set(iv, header.length + SALT_LENGTH);
-        full.set(encData, header.length + SALT_LENGTH + IV_LENGTH);
-        full.set(hmac, header.length + SALT_LENGTH + IV_LENGTH + encData.length);
+        full.set(iterations, 4);
+        full.set(salt, 8);
+        full.set(nonce, 8 + SALT_LENGTH);
+        full.set(encData, HEADER_LENGTH);
+        full.set(hmac, HEADER_LENGTH + encData.length);
 
-        const blob = new Blob([full], { type: 'application/octet-stream' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'vault.vault';
-        a.click();
-        URL.revokeObjectURL(url);
+        processedBlob = new Blob([full], { type: 'application/octet-stream' });
+        processedFileName = 'vault.ara';
 
         secureWipe(encData);
         secureWipe(salt);
-        secureWipe(iv);
+        secureWipe(nonce);
         secureWipe(hmac);
         secureWipe(new Uint8Array(zipped));
 
-        updateProgress('Files encrypted successfully.', 100);
+        updateProgress('encrypt', 'Encryption complete.', 100);
+        document.getElementById('encrypt-actions').classList.remove('hidden');
+        document.getElementById('encrypt-download').onclick = () => {
+          const url = URL.createObjectURL(processedBlob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = processedFileName;
+          a.click();
+          URL.revokeObjectURL(url);
+        };
+        document.getElementById('encrypt-share').onclick = async () => {
+          const file = new File([processedBlob], processedFileName, { type: 'application/octet-stream' });
+          if (navigator.share && navigator.canShare({ files: [file] })) {
+            try {
+              await navigator.share({ files: [file], title: 'Lockara Vault', text: 'Share your encrypted file.' });
+            } catch (e) {
+              showError('encrypt', 'Sharing failed.');
+            }
+          }
+        };
       } catch (e) {
-        showError(`Encryption error: ${e.message}`);
+        showError('encrypt', `Encryption failed: ${e.message}`);
       } finally {
         selectedEncryptFiles = [];
         document.getElementById('encrypt-files-count').textContent = 'No files selected';
         document.getElementById('encrypt-password-strength').textContent = '';
         toggleProcessing(false);
-        setTimeout(() => updateProgress('', 0), 2000);
+        setTimeout(() => updateProgress('encrypt', '', 0), 2000);
       }
-    }
+    };
 
-    async function decryptFile() {
+    const decryptFile = async () => {
       if (isProcessing) return;
       const passwordInput = document.getElementById('decrypt-password');
-      const passwordBytes = new TextEncoder().encode(passwordInput.value);
-      passwordInput.value = ''; // Clear input immediately
+      const password = passwordInput.value;
+      if (password.length > 128) {
+        showError('decrypt', 'Password must be 128 characters or less.');
+        return;
+      }
+      const passwordBytes = new TextEncoder().encode(password);
+      passwordInput.value = '';
       if (!selectedDecryptFile) {
         secureWipe(passwordBytes);
-        showError('Please select a file to decrypt.');
+        showError('decrypt', 'Please select a .ara file.');
         return;
       }
       if (!passwordBytes.length) {
         secureWipe(passwordBytes);
-        showError('Please enter a password.');
+        showError('decrypt', 'Please enter a password.');
         return;
       }
 
       toggleProcessing(true);
-      updateProgress('Reading file...', 10);
+      updateProgress('decrypt', 'Reading file...', 10);
 
       try {
         const buffer = await selectedDecryptFile.arrayBuffer();
-        if (buffer.byteLength < (3 + SALT_LENGTH + IV_LENGTH + HMAC_LENGTH)) {
-          throw new Error('Invalid file format.');
+        if (buffer.byteLength < HEADER_LENGTH + HMAC_LENGTH) {
+          throw new Error('Invalid .ara file: too small.');
         }
 
-        const header = new TextDecoder().decode(buffer.slice(0, 3));
+        const header = new TextDecoder().decode(buffer.slice(0, 4));
         if (header !== FILE_FORMAT_VERSION) {
           throw new Error('Unsupported file version.');
         }
 
-        const salt = buffer.slice(3, 3 + SALT_LENGTH);
-        const iv = buffer.slice(3 + SALT_LENGTH, 3 + SALT_LENGTH + IV_LENGTH);
+        const iterations = new DataView(buffer.slice(4, 8)).getUint32(0, false);
+        if (iterations < 1000000 || iterations > 2000000) {
+          throw new Error('Invalid iteration count in file.');
+        }
+        const salt = buffer.slice(8, 8 + SALT_LENGTH);
+        const nonce = buffer.slice(8 + SALT_LENGTH, 8 + SALT_LENGTH + NONCE_LENGTH);
         const hmac = buffer.slice(buffer.byteLength - HMAC_LENGTH);
-        const encrypted = buffer.slice(3 + SALT_LENGTH + IV_LENGTH, buffer.byteLength - HMAC_LENGTH);
+        const encrypted = buffer.slice(HEADER_LENGTH, buffer.byteLength - HMAC_LENGTH);
+        if (encrypted.byteLength < 16) {
+          throw new Error('Invalid .ara file: encrypted data too small.');
+        }
 
-        updateProgress('Processing key...', 30);
+        updateProgress('decrypt', 'Processing key...', 30);
+        settings.pbkdf2Iterations = iterations;
         const keyMaterial = await getKeyMaterial(passwordBytes);
         const { encKey, hmacKey } = await deriveKeys(keyMaterial, new Uint8Array(salt));
 
-        updateProgress('Verifying integrity...', 50);
+        updateProgress('decrypt', 'Verifying integrity...', 50);
         if (!(await verifyHMAC(hmacKey, new Uint8Array(encrypted), new Uint8Array(hmac)))) {
           throw new Error('File integrity check failed.');
         }
 
         let decrypted;
         try {
-          decrypted = await crypto.subtle.decrypt(
-            { name: 'AES-GCM', iv: new Uint8Array(iv) },
-            encKey,
-            encrypted
-          );
+          decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: new Uint8Array(nonce) }, encKey, encrypted);
         } catch (e) {
-          throw new Error('Invalid password or corrupted file.');
+          throw new Error('Incorrect password or corrupted file.');
         }
 
-        updateProgress('Extracting archive...', 70);
+        updateProgress('decrypt', 'Extracting archive...', 70);
         const zip = await JSZip.loadAsync(decrypted);
         const outputZip = new JSZip();
-        for (let name of Object.keys(zip.files)) {
+        for (const name of Object.keys(zip.files)) {
           const fileData = await zip.files[name].async('blob');
           outputZip.file(name, fileData);
         }
 
-        updateProgress('Finalizing...', 90);
-        const finalBlob = await outputZip.generateAsync({ type: 'blob' });
-        const url = URL.createObjectURL(finalBlob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'decrypted_files.zip';
-        a.click();
-        URL.revokeObjectURL(url);
+        updateProgress('decrypt', 'Finalizing...', 90);
+        processedBlob = await outputZip.generateAsync({ type: 'blob' });
+        processedFileName = 'decrypted_files.zip';
 
         secureWipe(new Uint8Array(encrypted));
         secureWipe(new Uint8Array(salt));
-        secureWipe(new Uint8Array(iv));
+        secureWipe(new Uint8Array(nonce));
         secureWipe(new Uint8Array(hmac));
         secureWipe(new Uint8Array(decrypted));
 
-        updateProgress('Files decrypted successfully.', 100);
+        updateProgress('decrypt', 'Decryption complete.', 100);
+        document.getElementById('decrypt-actions').classList.remove('hidden');
+        document.getElementById('decrypt-download').onclick = () => {
+          const url = URL.createObjectURL(processedBlob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = processedFileName;
+          a.click();
+          URL.revokeObjectURL(url);
+        };
+        document.getElementById('decrypt-share').onclick = async () => {
+          const file = new File([processedBlob], processedFileName, { type: 'application/zip' });
+          if (navigator.share && navigator.canShare({ files: [file] })) {
+            try {
+              await navigator.share({ files: [file], title: 'Lockara Decrypted Files', text: 'Share your decrypted files.' });
+            } catch (e) {
+              showError('decrypt', 'Sharing failed.');
+            }
+          }
+        };
       } catch (e) {
-        showError(`Decryption error: ${e.message}`);
+        showError('decrypt', `Decryption failed: ${e.message}`);
       } finally {
         selectedDecryptFile = null;
         document.getElementById('decrypt-file-name').textContent = 'No file selected';
         toggleProcessing(false);
-        setTimeout(() => updateProgress('', 0), 2000);
+        setTimeout(() => updateProgress('decrypt', '', 0), 2000);
       }
-    }
+    };
 
     // Security Check
-    if (!window.crypto || !window.crypto.subtle) {
-      showError('This browser does not support required cryptographic operations.');
+    if (!crypto?.subtle) {
+      showError('encrypt', 'This device does not support required cryptography.');
       toggleProcessing(true);
     }
 
-    // PWA: Register Service Worker
+    // PWA Service Worker
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/service-worker.js')
-          .then(registration => {
-            console.log('Service Worker registered with scope:', registration.scope);
-          })
-          .catch(error => {
-            console.error('Service Worker registration failed:', error);
-          });
-      });
+          .then(reg => console.log('Service Worker registered:', reg.scope))
+          .catch(err => console.error('Service Worker registration failed:', err));
+      }, { passive: true });
     }
   </script>
 </body>
