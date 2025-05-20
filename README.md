@@ -8,7 +8,7 @@ If it doesn’t work — it’s probably you.
 ## ⚙️ Config
 
 ```js
-PBKDF2_ITERATIONS:     2_000_000
+PBKDF2_ITERATIONS:     5_000_000
 KEY_LENGTH:            32
 SALT_LENGTH:           16
 IV_LENGTH:             12
