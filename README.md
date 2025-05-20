@@ -1,5 +1,5 @@
 # 🔐 Lockara  
-Open in browser: https://lockara.github.io/Lockara  
+Open in browser: [Lockara](https://lockara.github.io)  
 Type. Click. Done.  
 If it doesn’t work — it’s probably you.
 
