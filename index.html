@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="description" content="Secure text encryption and decryption tool">
-    <title>Lightning Cipher</title>
+    <title>Lockara</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     <style>
         :root {
@@ -271,7 +271,7 @@
     </style>
 </head>
 <body>
-    <h1>Lightning Cipher</h1>
+    <h1>Lockara</h1>
     <div class="tab-buttons">
         <button onclick="showTab('encryptTab')" class="active" aria-label="Show encryption tab" data-tab="encryptTab">Encrypt</button>
         <button onclick="showTab('decryptTab')" aria-label="Show decryption tab" data-tab="decryptTab">Decrypt</button>
@@ -321,8 +321,8 @@
     </div>
     <div id="toast" class="toast"></div>
     <footer>
-        <p>© 2025 Lightning Cipher. Licensed under <a href="https://www.gnu.org/licenses/gpl-3.0.en.html" target="_blank" rel="noopener noreferrer">GPLv3</a>.</p>
-        <p><a href="https://github.com/axipgp/axipgp.github.io" target="_blank" rel="noopener noreferrer">Source on GitHub</a>.</p>
+        <p>© 2025 Lockara. Licensed under <a href="https://www.gnu.org/licenses/gpl-3.0.en.html" target="_blank" rel="noopener noreferrer">GPLv3</a>.</p>
+        <p><a href="https://github.com/lockara/lockara.github.io" target="_blank" rel="noopener noreferrer">Source on GitHub</a>.</p>
     </footer>
     <script>
         const CONFIG = {
@@ -668,7 +668,7 @@
                     try {
                         await navigator.clipboard.writeText('');
                     } catch {
-                        // Silent fail
+                        // Silent fail :)
                     }
                 }, CONFIG.CLIPBOARD_CLEAR_TIMEOUT);
             } catch {
