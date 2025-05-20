@@ -1,680 +1,802 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="description" content="Lockara: Secure file encryption and decryption, built for privacy.">
-  <meta name="keywords" content="encryption, decryption, security, privacy, lockara">
-  <meta name="author" content="Lockara Team">
-  <meta name="theme-color" content="#1f1f1f">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="manifest" href="/manifest.json">
-  <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
-  <title>Lockara</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body {
-      background: linear-gradient(180deg, #1f1f1f 0%, #141414 100%);
-      overscroll-behavior: none;
-      touch-action: pan-y;
-    }
-    main {
-      height: 100vh;
-      width: 100vw;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    .fade-in {
-      animation: fadeIn 0.3s ease-out;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .progress-bar {
-      height: 3px;
-      background: #a78bfa;
-      transition: width 0.3s ease;
-      border-radius: 1.5px;
-    }
-    .tab-container {
-      position: relative;
-      border-bottom: 1px solid #2d2d2d;
-    }
-    .tab-container::before {
-      content: '';
-      position: absolute;
-      bottom: -1px;
-      left: 0;
-      width: 50%;
-      height: 2px;
-      background: #a78bfa;
-      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .tab-container.encrypt-active::before {
-      transform: translateX(0);
-    }
-    .tab-container.decrypt-active::before {
-      transform: translateX(100%);
-    }
-    .settings-panel, .info-panel {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      transform: translateY(100%);
-      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      background: #1f1f1f;
-      border-top-left-radius: 16px;
-      border-top-right-radius: 16px;
-      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.3);
-      overscroll-behavior: contain;
-    }
-    .settings-panel.open, .info-panel.open {
-      transform: translateY(0);
-    }
-    .close-btn {
-      transition: transform 0.2s ease, color 0.2s ease;
-    }
-    .close-btn:hover, .close-btn:active {
-      transform: scale(1.1);
-      color: #e879f9;
-    }
-    .input-container {
-      position: relative;
-    }
-    .toggle-password {
-      position: absolute;
-      right: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      cursor: pointer;
-      color: #a78bfa;
-      transition: color 0.2s ease, transform 0.2s ease;
-    }
-    .toggle-password:hover, .toggle-password:active {
-      color: #e879f9;
-      transform: translateY(-50%) scale(1.1);
-    }
-    .error-pulse {
-      animation: pulse 0.5s ease-in-out 2;
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.6; }
-    }
-    button {
-      transition: transform 0.1s ease, background-color 0.2s ease;
-    }
-    button:active:not(:disabled) {
-      transform: scale(0.95);
-    }
-    button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-    .file-drop {
-      touch-action: none;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Secure text encryption and decryption tool">
+    <title>Lightning Cipher</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --text-primary: #e0e7ff;
+            --text-secondary: #8a94b3;
+            --accent-blue: #3b82f6;
+            --error-color: #ef4444;
+            --toast-bg: #1a1a22;
+            --progress-bg: #4b5e7a;
+            --success-color: #22c55e;
+            --warning-color: #f59e0b;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            touch-action: manipulation;
+        }
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+            margin-bottom: 24px;
+            text-align: center;
+        }
+        .tab-buttons {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            justify-content: center;
+        }
+        .tab-buttons button {
+            flex: 1;
+            max-width: 140px;
+            background: transparent;
+            color: var(--text-secondary);
+            border: none;
+            padding: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: color 0.2s, border-bottom-color 0.2s;
+        }
+        .tab-buttons button.active {
+            color: var(--accent-blue);
+            border-bottom: 2px solid var(--accent-blue);
+        }
+        .tab-buttons button:hover:not(:disabled) {
+            color: var(--accent-blue);
+        }
+        .tab-content {
+            display: none;
+            width: 100%;
+            max-width: 500px;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .input-container {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        textarea, input[type="password"], input[type="text"] {
+            width: 100%;
+            background: #1a1a22;
+            color: var(--text-primary);
+            border: none;
+            padding: 16px;
+            font-size: 1.1rem;
+            resize: none;
+            -webkit-user-select: text;
+            user-select: text;
+            border-radius: 4px;
+        }
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        textarea:focus, input:focus {
+            outline: none;
+            background: #25252e;
+            box-shadow: 0 0 0 2px var(--accent-blue);
+        }
+        .password-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .password-input {
+            flex: 1;
+            padding-right: 60px;
+        }
+        .show-password {
+            position: absolute;
+            right: 14px;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            cursor: pointer;
+            padding: 4px;
+            transition: color 0.2s;
+        }
+        .show-password:hover:not(:disabled) {
+            color: var(--accent-blue);
+        }
+        .error, .success, .warning {
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .error { color: var(--error-color); }
+        .success { color: var(--success-color); }
+        .warning { color: var(--warning-color); }
+        .char-counter {
+            position: absolute;
+            bottom: -20px;
+            right: 0;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+        .password-strength {
+            font-size: 0.8rem;
+            margin-top: 8px;
+            color: var(--text-secondary);
+        }
+        .btn {
+            width: 100%;
+            background: var(--accent-blue);
+            color: var(--text-primary);
+            border: none;
+            padding: 14px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 20px;
+            transition: background 0.2s, transform 0.1s;
+            border-radius: 4px;
+        }
+        .btn:disabled {
+            background: #4b5e7a;
+            cursor: not-allowed;
+        }
+        .btn:hover:not(:disabled) {
+            background: #2563eb;
+        }
+        .btn:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+        .btn.loading .loader {
+            display: inline-block;
+        }
+        .loader {
+            display: none;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--accent-blue);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+        .progress-bar {
+            display: none;
+            width: 100%;
+            height: 5px;
+            background: var(--progress-bg);
+            margin-bottom: 20px;
+            overflow: hidden;
+            border-radius: 4px;
+        }
+        .progress-bar.active {
+            display: block;
+        }
+        .progress-bar::after {
+            content: '';
+            display: block;
+            width: 100%;
+            height: 100%;
+            background: var(--accent-blue);
+            animation: progress 2s linear infinite;
+        }
+        @keyframes progress {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--toast-bg);
+            color: var(--text-primary);
+            padding: 12px 20px;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            z-index: 1000;
+            max-width: 300px;
+        }
+        .toast.show {
+            opacity: 1;
+        }
+        footer {
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            padding: 16px;
+            margin-top: auto;
+        }
+        footer a {
+            color: var(--accent-blue);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        footer a:hover {
+            color: #2563eb;
+        }
+        @media (max-width: 500px) {
+            body {
+                padding: 16px;
+            }
+            h1 {
+                font-size: 1.9rem;
+            }
+            .tab-buttons button {
+                font-size: 1rem;
+                padding: 10px;
+            }
+            .btn {
+                font-size: 1rem;
+                padding: 12px;
+            }
+            textarea, input[type="password"], input[type="text"] {
+                font-size: 1rem;
+                padding: 14px;
+            }
+            .toast {
+                max-width: calc(100% - 32px);
+                right: 16px;
+                bottom: 16px;
+            }
+        }
+    </style>
 </head>
-<body class="text-gray-100 font-sans">
-  <main class="flex-1">
-    <!-- Header -->
-    <header class="flex justify-between items-center p-4 bg-[#1f1f1f] border-b border-[#2d2d2d]">
-      <h1 class="text-xl font-bold text-purple-400">Lockara</h1>
-      <div class="flex gap-2">
-        <button id="settings-toggle" class="text-purple-400 hover:text-purple-300 p-2 rounded-full transition-colors" aria-label="Open settings">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37zM15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-        </button>
-        <button id="info-toggle" class="text-purple-400 hover:text-purple-300 p-2 rounded-full transition-colors" aria-label="Open info">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-        </button>
-      </div>
-    </header>
-
-    <!-- Settings Panel (Bottom Sheet) -->
-    <div id="settings-panel" class="settings-panel p-6 max-h-[80vh] overflow-y-auto hidden">
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-lg font-semibold text-purple-400">Settings</h2>
-        <button id="settings-close" class="close-btn text-gray-400 hover:text-purple-300" aria-label="Close settings">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-        </button>
-      </div>
-      <div class="text-sm text-gray-300">
-        <p>Encryption uses PBKDF2 with 1,500,000 iterations for enhanced security.</p>
-      </div>
+<body>
+    <h1>Lightning Cipher</h1>
+    <div class="tab-buttons">
+        <button onclick="showTab('encryptTab')" class="active" aria-label="Show encryption tab" data-tab="encryptTab">Encrypt</button>
+        <button onclick="showTab('decryptTab')" aria-label="Show decryption tab" data-tab="decryptTab">Decrypt</button>
     </div>
-
-    <!-- Info Panel (Bottom Sheet) -->
-    <div id="info-panel" class="info-panel p-6 max-h-[80vh] overflow-y-auto hidden">
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-lg font-semibold text-purple-400">Info</h2>
-        <button id="info-close" class="close-btn text-gray-400 hover:text-purple-300" aria-label="Close info">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-        </button>
-      </div>
-      <div class="space-y-4">
-        <a href="https://lockara.com/about" target="_blank" class="block text-purple-400 hover:text-purple-300 text-sm font-medium transition-colors">About Us</a>
-        <a href="https://lockara.com/contact" target="_blank" class="block text-purple-400 hover:text-purple-300 text-sm font-medium transition-colors">Contact Us</a>
-        <p class="text-xs text-gray-400">© 2025 Lockara Team. All rights reserved.</p>
-      </div>
+    <div id="encryptTab" class="tab-content active">
+        <div class="input-container">
+            <textarea id="textToEncrypt" rows="6" placeholder="Enter text to encrypt" maxlength="100000" aria-label="Text to encrypt"></textarea>
+            <span id="encryptCharCount" class="char-counter">0/100000</span>
+        </div>
+        <div class="password-container">
+            <input type="password" id="passwordEncrypt" class="password-input" placeholder="Enter password" autocomplete="new-password" aria-label="Encryption password">
+            <button class="show-password" onclick="togglePassword('passwordEncrypt')" aria-label="Toggle password visibility">Show</button>
+        </div>
+        <div id="encryptPasswordStrength" class="password-strength"></div>
+        <div id="encryptError" class="error" role="alert"></div>
+        <div id="encryptSuccess" class="success" role="alert"></div>
+        <button id="encryptBtn" onclick="encryptText()" class="btn"><span class="loader"></span><i class="fas fa-lock"></i> Encrypt</button>
+        <div class="input-container">
+            <textarea id="encryptionResult" rows="6" readonly placeholder="Encrypted result" aria-label="Encrypted result"></textarea>
+            <span id="encryptResultCharCount" class="char-counter">0/200000</span>
+        </div>
+        <div class="btn-container" id="encryptBtnContainer">
+            <button id="encryptCopyBtn" onclick="copyToClipboard('encryptionResult')" class="btn"><span class="loader"></span><i class="fas fa-copy"></i> Copy</button>
+        </div>
     </div>
-
-    <!-- Tabs -->
-    <div class="tab-container flex">
-      <button id="encrypt-tab" class="flex-1 py-4 text-center text-sm font-medium text-purple-400 transition-colors" onclick="switchTab('encrypt')" aria-selected="true">Encrypt</button>
-      <button id="decrypt-tab" class="flex-1 py-4 text-center text-sm font-medium text-gray-400 hover:text-purple-400 transition-colors" onclick="switchTab('decrypt')" aria-selected="false">Decrypt</button>
+    <div id="decryptTab" class="tab-content" hidden>
+        <div class="input-container">
+            <textarea id="textToDecrypt" rows="6" placeholder="Enter encrypted text" maxlength="200000" aria-label="Text to decrypt"></textarea>
+            <span id="decryptCharCount" class="char-counter">0/200000</span>
+        </div>
+        <div class="password-container">
+            <input type="password" id="passwordDecrypt" class="password-input" placeholder="Enter password" autocomplete="current-password" aria-label="Decryption password">
+            <button class="show-password" onclick="togglePassword('passwordDecrypt')" aria-label="Toggle password visibility">Show</button>
+        </div>
+        <div id="decryptPasswordStrength" class="password-strength"></div>
+        <div id="decryptError" class="error" role="alert"></div>
+        <div id="decryptSuccess" class="success" role="alert"></div>
+        <div id="decryptProgress" class="progress-bar"></div>
+        <button id="decryptBtn" onclick="decryptText()" class="btn"><span class="loader"></span><i class="fas fa-unlock"></i> Decrypt</button>
+        <div class="input-container">
+            <textarea id="decryptionResult" rows="6" readonly placeholder="Decrypted result" aria-label="Decrypted result"></textarea>
+            <span id="decryptResultCharCount" class="char-counter">0/100000</span>
+        </div>
+        <div class="btn-container" id="decryptBtnContainer">
+            <button id="decryptCopyBtn" onclick="copyToClipboard('decryptionResult')" class="btn"><span class="loader"></span><i class="fas fa-copy"></i> Copy</button>
+        </div>
     </div>
+    <div id="toast" class="toast"></div>
+    <footer>
+        <p>© 2025 Lightning Cipher. Licensed under <a href="https://www.gnu.org/licenses/gpl-3.0.en.html" target="_blank" rel="noopener noreferrer">GPLv3</a>.</p>
+        <p><a href="https://github.com/axipgp/axipgp.github.io" target="_blank" rel="noopener noreferrer">Source on GitHub</a>.</p>
+    </footer>
+    <script>
+        const CONFIG = {
+            MAX_TEXT_LENGTH: 100000,
+            MAX_ENCRYPTED_LENGTH: 200000,
+            CLIPBOARD_CLEAR_TIMEOUT: 15000,
+            TOAST_DURATION: 3000,
+            DECRYPT_FAIL_LIMIT: 3,
+            DECRYPT_LOCKOUT_MS: 5000,
+            PBKDF2_ITERATIONS: 2000000,
+            PBKDF2_KEY_LENGTH: 32,
+            SALT_LENGTH: 16,
+            IV_LENGTH: 12,
+            DEBOUNCE_MS: 300,
+            MIN_PASSWORD_LENGTH: 8
+        };
 
-    <!-- Encrypt Section -->
-    <section id="encrypt-section" class="flex-1 p-4 fade-in overflow-y-auto">
-      <div id="encrypt-box" class="file-drop bg-[#2d2d2d] p-6 rounded-lg text-center" role="button" aria-label="Drag files here or tap to select" tabindex="0">
-        <p class="text-gray-300">Drag files or tap to select</p>
-        <input type="file" id="encryptInput" multiple class="hidden">
-        <p id="encrypt-files-count" class="text-xs text-gray-400 mt-2">No files selected</p>
-      </div>
-      <div class="input-container mt-4">
-        <input type="password" id="encrypt-password" placeholder="Enter password" class="w-full p-3 bg-[#2d2d2d] rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-400 transition-shadow" aria-label="Encryption password" maxlength="128" autocomplete="new-password">
-        <span id="encrypt-password-toggle" class="toggle-password" aria-label="Toggle password visibility">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-        </span>
-      </div>
-      <p class="text-xs text-gray-400 mt-2">Use up to 128 characters. ASCII recommended for compatibility.</p>
-      <div id="encrypt-password-strength" class="text-xs text-gray-400 mt-2"></div>
-      <button onclick="encryptFiles()" class="mt-4 w-full bg-purple-500 text-white font-semibold py-3 rounded-lg hover:bg-purple-400 disabled:bg-gray-600 transition-colors" disabled>Encrypt Files</button>
-      <div id="encrypt-actions" class="mt-4 flex gap-4 hidden">
-        <button id="encrypt-download" class="flex-1 bg-teal-500 text-white font-semibold py-3 rounded-lg hover:bg-teal-400 transition-colors">Download</button>
-        <button id="encrypt-share" class="flex-1 bg-indigo-500 text-white font-semibold py-3 rounded-lg hover:bg-indigo-400 transition-colors hidden">Share</button>
-      </div>
-      <div id="encrypt-error" class="text-red-400 text-xs mt-4 hidden" role="alert"></div>
-      <div id="encrypt-progress" class="text-teal-400 text-xs mt-4" aria-live="polite"></div>
-      <div id="encrypt-progress-bar" class="progress-bar w-0 mt-2"></div>
-    </section>
+        let decryptFailCount = 0;
+        let isDecryptLocked = false;
+        let toastTimeout = null;
+        let activeTab = 'encryptTab';
 
-    <!-- Decrypt Section -->
-    <section id="decrypt-section" class="flex-1 p-4 hidden fade-in overflow-y-auto">
-      <div id="decrypt-box" class="file-drop bg-[#2d2d2d] p-6 rounded-lg text-center" role="button" aria-label="Drag .ara file here or tap to select" tabindex="0">
-        <p class="text-gray-300">Drag .ara file or tap</p>
-        <input type="file" id="decryptInput" accept=".ara" class="hidden">
-        <p id="decrypt-file-name" class="text-xs text-gray-400 mt-2">No file selected</p>
-      </div>
-      <div class="input-container mt-4">
-        <input type="password" id="decrypt-password" placeholder="Enter password" class="w-full p-3 bg-[#2d2d2d] rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-400 transition-shadow" aria-label="Decryption password" maxlength="128" autocomplete="new-password">
-        <span id="decrypt-password-toggle" class="toggle-password" aria-label="Toggle password visibility">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-        </span>
-      </div>
-      <button onclick="decryptFile()" class="mt-4 w-full bg-purple-500 text-white font-semibold py-3 rounded-lg hover:bg-purple-400 disabled:bg-gray-600 transition-colors" disabled>Decrypt File</button>
-      <div id="decrypt-actions" class="mt-4 flex gap-4 hidden">
-        <button id="decrypt-download" class="flex-1 bg-teal-500 text-white font-semibold py-3 rounded-lg hover:bg-teal-400 transition-colors">Download</button>
-        <button id="decrypt-share" class="flex-1 bg-indigo-500 text-white font-semibold py-3 rounded-lg hover:bg-indigo-400 transition-colors hidden">Share</button>
-      </div>
-      <div id="decrypt-error" class="text-red-400 text-xs mt-4 hidden" role="alert"></div>
-      <div id="decrypt-progress" class="text-teal-400 text-xs mt-4" aria-live="polite"></div>
-      <div id="decrypt-progress-bar" class="progress-bar w-0 mt-2"></div>
-    </section>
-  </main>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <script>
-    // State
-    let selectedEncryptFiles = [];
-    let selectedDecryptFile = null;
-    let isProcessing = false;
-    let activeTab = 'encrypt';
-    let processedBlob = null;
-    let processedFileName = '';
-
-    // Constants
-    const PBKDF2_ITERATIONS = 1500000;
-    const FILE_FORMAT_VERSION = 'LARA';
-    const SALT_LENGTH = 32;
-    const NONCE_LENGTH = 12;
-    const HMAC_LENGTH = 64;
-    const HEADER_LENGTH = 4 + 4 + SALT_LENGTH + NONCE_LENGTH;
-
-    // Utility Functions
-    const showError = (section, message, color = 'red-400') => {
-      const errorDiv = document.getElementById(`${section}-error`);
-      errorDiv.textContent = message;
-      errorDiv.className = `text-xs mt-4 text-${color} error-pulse`;
-      errorDiv.classList.remove('hidden');
-      setTimeout(() => errorDiv.classList.add('hidden'), 5000);
-    };
-
-    const updateProgress = (section, message, percent = 0) => {
-      document.getElementById(`${section}-progress`).textContent = message;
-      document.getElementById(`${section}-progress-bar`).style.width = `${percent}%`;
-    };
-
-    const toggleProcessing = (state) => {
-      isProcessing = state;
-      document.querySelectorAll('button:not(#settings-close):not(#info-close)').forEach(btn => btn.disabled = state);
-      document.querySelectorAll('#encrypt-box, #decrypt-box').forEach(box => box.setAttribute('aria-disabled', state));
-    };
-
-    const estimatePasswordStrength = (password) => {
-      if (!password) return { strength: 'empty', message: '' };
-      const length = password.length;
-      const hasLetter = /[a-zA-Z]/.test(password);
-      const hasNumber = /\d/.test(password);
-      const hasSymbol = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-      let entropy = (hasLetter ? 52 : 0) + (hasNumber ? 10 : 0) + (hasSymbol ? 33 : 0);
-      const score = length * Math.log2(entropy || 1);
-      if (score < 40) return { strength: 'weak', message: 'Weak: Add more characters.' };
-      if (score < 80) return { strength: 'medium', message: 'Moderate: Try a longer password.' };
-      return { strength: 'strong', message: 'Strong password' };
-    };
-
-    const secureWipe = (array) => {
-      if (array instanceof Uint8Array) {
-        crypto.getRandomValues(array);
-        array.fill(0);
-      }
-    };
-
-    // UI Event Handlers
-    const switchTab = (tab) => {
-      if (isProcessing) return;
-      activeTab = tab;
-      const encryptTab = document.getElementById('encrypt-tab');
-      const decryptTab = document.getElementById('decrypt-tab');
-      const encryptSection = document.getElementById('encrypt-section');
-      const decryptSection = document.getElementById('decrypt-section');
-      const tabContainer = document.querySelector('.tab-container');
-      const settingsToggle = document.getElementById('settings-toggle');
-
-      encryptTab.classList.toggle('text-purple-400', tab === 'encrypt');
-      encryptTab.classList.toggle('text-gray-400', tab !== 'encrypt');
-      decryptTab.classList.toggle('text-purple-400', tab === 'decrypt');
-      decryptTab.classList.toggle('text-gray-400', tab !== 'decrypt');
-      encryptSection.classList.toggle('hidden', tab !== 'encrypt');
-      decryptSection.classList.toggle('hidden', tab !== 'decrypt');
-      tabContainer.classList.toggle('encrypt-active', tab === 'encrypt');
-      tabContainer.classList.toggle('decrypt-active', tab === 'decrypt');
-      encryptTab.setAttribute('aria-selected', tab === 'encrypt');
-      decryptTab.setAttribute('aria-selected', tab === 'decrypt');
-      settingsToggle.classList.toggle('hidden', tab !== 'encrypt');
-      document.getElementById('settings-panel').classList.add('hidden');
-      document.getElementById('info-panel').classList.add('hidden');
-      document.getElementById('encrypt-actions').classList.add('hidden');
-      document.getElementById('decrypt-actions').classList.add('hidden');
-    };
-
-    const togglePanel = (panelId) => {
-      const settingsPanel = document.getElementById('settings-panel');
-      const infoPanel = document.getElementById('info-panel');
-      const isSettings = panelId === 'settings-panel';
-      const panel = isSettings ? settingsPanel : infoPanel;
-      const otherPanel = isSettings ? infoPanel : settingsPanel;
-      const isOpen = !panel.classList.contains('hidden');
-
-      if (isOpen) {
-        panel.classList.add('hidden');
-        panel.classList.remove('open');
-      } else {
-        panel.classList.remove('hidden');
-        panel.classList.add('open');
-        otherPanel.classList.add('hidden');
-        otherPanel.classList.remove('open');
-      }
-    };
-
-    const setupFileInput = (boxId, inputId, countId, isDecrypt = false) => {
-      const box = document.getElementById(boxId);
-      const input = document.getElementById(inputId);
-      const count = document.getElementById(countId);
-
-      const handleFiles = (files) => {
-        if (isProcessing) return;
-        if (isDecrypt) {
-          selectedDecryptFile = files[0];
-          if (!selectedDecryptFile?.name.endsWith('.ara')) {
-            showError('decrypt', 'Please select a .ara file.');
-            selectedDecryptFile = null;
-            count.textContent = 'No file selected';
-            return;
-          }
-          count.textContent = selectedDecryptFile.name;
-          document.querySelector('#decrypt-section button').disabled = !selectedDecryptFile || !document.getElementById('decrypt-password').value;
-        } else {
-          selectedEncryptFiles = Array.from(files);
-          count.textContent = selectedEncryptFiles.length ? `${selectedEncryptFiles.length} file(s)` : 'No files selected';
-          document.querySelector('#encrypt-section button').disabled = !selectedEncryptFiles.length;
+        class SecureBuffer {
+            constructor(data) {
+                this.buffer = data instanceof Uint8Array ? data : new Uint8Array(data);
+            }
+            wipe() {
+                if (this.buffer) {
+                    crypto.getRandomValues(this.buffer); // Overwrite with random data
+                    this.buffer.fill(0);
+                    this.buffer = null;
+                }
+            }
         }
-      };
 
-      box.addEventListener('click', () => !isProcessing && input.click(), { passive: true });
-      box.addEventListener('keydown', e => (e.key === 'Enter' || e.key === ' ') && !isProcessing && input.click(), { passive: true });
-      box.addEventListener('dragover', e => {
-        e.preventDefault();
-        if (!isProcessing) box.classList.add('bg-[#3d3d3d]');
-      }, { passive: true });
-      box.addEventListener('dragleave', e => {
-        e.preventDefault();
-        box.classList.remove('bg-[#3d3d3d]');
-      }, { passive: true });
-      box.addEventListener('drop', e => {
-        e.preventDefault();
-        box.classList.remove('bg-[#3d3d3d]');
-        handleFiles(e.dataTransfer.files);
-      }, { passive: false });
-      input.addEventListener('change', e => handleFiles(e.target.files), { passive: true });
-    };
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func(...args), wait);
+            };
+        }
 
-    const setupPasswordToggle = (inputId, toggleId) => {
-      const input = document.getElementById(inputId);
-      const toggle = document.getElementById(toggleId);
-      toggle.addEventListener('click', () => {
-        const isHidden = input.type === 'password';
-        input.type = isHidden ? 'text' : 'password';
-        toggle.innerHTML = isHidden
-          ? `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path></svg>`
-          : `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>`;
-      }, { passive: true });
-    };
+        function checkPasswordStrength(password) {
+            let strength = 0;
+            if (password.length >= CONFIG.MIN_PASSWORD_LENGTH) strength++;
+            if (/[A-Z]/.test(password)) strength++;
+            if (/[0-9]/.test(password)) strength++;
+            if (/[^A-Za-z0-9]/.test(password)) strength++;
 
-    // Initialize UI
-    document.getElementById('settings-toggle').addEventListener('click', () => togglePanel('settings-panel'), { passive: true });
-    document.getElementById('settings-close').addEventListener('click', () => togglePanel('settings-panel'), { passive: true });
-    document.getElementById('info-toggle').addEventListener('click', () => togglePanel('info-panel'), { passive: true });
-    document.getElementById('info-close').addEventListener('click', () => togglePanel('info-panel'), { passive: true });
+            switch (strength) {
+                case 0:
+                case 1: return { text: 'Weak password', color: 'var(--error-color)' };
+                case 2:
+                case 3: return { text: 'Moderate password', color: 'var(--warning-color)' };
+                case 4: return { text: 'Strong password', color: 'var(--success-color)' };
+                default: return { text: '', color: 'var(--text-secondary)' };
+            }
+        }
 
-    document.getElementById('encrypt-password').addEventListener('input', e => {
-      const { strength, message } = estimatePasswordStrength(e.target.value);
-      const strengthDiv = document.getElementById('encrypt-password-strength');
-      strengthDiv.textContent = message;
-      strengthDiv.className = `text-xs mt-2 ${strength === 'weak' ? 'text-red-400' : strength === 'medium' ? 'text-yellow-400' : strength === 'strong' ? 'text-teal-400' : 'text-gray-400'}`;
-      document.querySelector('#encrypt-section button').disabled = !selectedEncryptFiles.length || !e.target.value;
-    }, { passive: true });
+        function updatePasswordStrength(inputId, strengthId) {
+            const input = document.getElementById(inputId);
+            const strengthEl = document.getElementById(strengthId);
+            const { text, color } = checkPasswordStrength(input.value);
+            strengthEl.textContent = text;
+            strengthEl.style.color = color;
+        }
 
-    document.getElementById('decrypt-password').addEventListener('input', e => {
-      document.querySelector('#decrypt-section button').disabled = !selectedDecryptFile || !e.target.value;
-    }, { passive: true });
+        async function deriveKey(password, salt = null) {
+            if (!crypto?.subtle || !crypto.getRandomValues) {
+                throw new Error('WebCrypto API not supported.');
+            }
+            const encoder = new TextEncoder();
+            const passwordBuffer = new SecureBuffer(encoder.encode(password));
+            try {
+                if (!salt) {
+                    salt = crypto.getRandomValues(new Uint8Array(CONFIG.SALT_LENGTH));
+                }
+                const keyMaterial = await crypto.subtle.importKey(
+                    "raw",
+                    passwordBuffer.buffer,
+                    { name: "PBKDF2" },
+                    false,
+                    ["deriveBits", "deriveKey"]
+                );
+                const key = await crypto.subtle.deriveKey(
+                    {
+                        name: "PBKDF2",
+                        salt,
+                        iterations: CONFIG.PBKDF2_ITERATIONS,
+                        hash: "SHA-512"
+                    },
+                    keyMaterial,
+                    { name: "AES-GCM", length: 256 },
+                    false,
+                    ["encrypt", "decrypt"]
+                );
+                return { key, salt };
+            } finally {
+                passwordBuffer.wipe();
+            }
+        }
 
-    setupFileInput('encrypt-box', 'encryptInput', 'encrypt-files-count');
-    setupFileInput('decrypt-box', 'decryptInput', 'decrypt-file-name', true);
-    setupPasswordToggle('encrypt-password', 'encrypt-password-toggle');
-    setupPasswordToggle('decrypt-password', 'decrypt-password-toggle');
+        function arrayBufferToBase64(buffer) {
+            try {
+                return btoa(String.fromCharCode(...new Uint8Array(buffer)));
+            } catch {
+                throw new Error('Failed to encode to Base64');
+            }
+        }
 
-    // Check Share API Support
-    const canShareFiles = navigator.share && navigator.canShare;
-    if (canShareFiles) {
-      document.getElementById('encrypt-share').classList.remove('hidden');
-      document.getElementById('decrypt-share').classList.remove('hidden');
-    }
+        function base64ToArrayBuffer(base64) {
+            try {
+                const binary = atob(base64);
+                const buffer = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) {
+                    buffer[i] = binary.charCodeAt(i);
+                }
+                return new SecureBuffer(buffer);
+            } catch {
+                throw new Error("Invalid Base64 encoding");
+            }
+        }
 
-    // Crypto Functions
-    const getKeyMaterial = async (passwordBytes) => {
-      try {
-        if (!(passwordBytes instanceof Uint8Array)) throw new Error('Invalid password format.');
-        const keyMaterial = await crypto.subtle.importKey('raw', passwordBytes, 'PBKDF2', false, ['deriveBits', 'deriveKey']);
-        return keyMaterial;
-      } catch (e) {
-        throw new Error('Key import failed: ' + e.message);
-      } finally {
-        secureWipe(passwordBytes);
-      }
-    };
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.style.background = type === 'error' ? 'var(--error-color)' : 
+                                  type === 'success' ? 'var(--success-color)' : 
+                                  'var(--toast-bg)';
+            toast.classList.add('show');
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => toast.classList.remove('show'), CONFIG.TOAST_DURATION);
+        }
 
-    const deriveKeys = async (keyMaterial, salt) => {
-      try {
-        if (!(salt instanceof Uint8Array) || salt.length !== SALT_LENGTH) throw new Error('Invalid salt.');
-        const encKey = await crypto.subtle.deriveKey(
-          { name: 'PBKDF2', salt, iterations: PBKDF2_ITERATIONS, hash: 'SHA-512' },
-          keyMaterial,
-          { name: 'AES-GCM', length: 256 },
-          false,
-          ['encrypt', 'decrypt']
-        );
-        const hmacKey = await crypto.subtle.deriveKey(
-          { name: 'PBKDF2', salt: new Uint8Array([...salt, 1]), iterations: PBKDF2_ITERATIONS, hash: 'SHA-512' },
-          keyMaterial,
-          { name: 'HMAC', hash: 'SHA-512', length: 512 },
-          false,
-          ['sign', 'verify']
-        );
-        return { encKey, hmacKey };
-      } catch (e) {
-        throw new Error('Key derivation failed: ' + e.message);
-      }
-    };
+        function toggleButtonLoading(buttonId, isLoading) {
+            const btn = document.getElementById(buttonId);
+            if (btn) {
+                btn.disabled = isLoading;
+                btn.classList.toggle('loading', isLoading);
+            }
+        }
 
-    const computeHMAC = async (key, data) => {
-      if (!(data instanceof Uint8Array)) throw new Error('Invalid data for HMAC.');
-      return new Uint8Array(await crypto.subtle.sign('HMAC', key, data));
-    };
+        function toggleProgressBar(isVisible) {
+            const progress = document.getElementById('decryptProgress');
+            if (progress) {
+                progress.classList.toggle('active', isVisible);
+            }
+        }
 
-    const verifyHMAC = async (key, data, signature) => {
-      if (!(data instanceof Uint8Array) || !(signature instanceof Uint8Array)) throw new Error('Invalid HMAC inputs.');
-      return await crypto.subtle.verify('HMAC', key, signature, data);
-    };
+        function updateCharCount(inputId, counterId) {
+            const input = document.getElementById(inputId);
+            const counter = document.getElementById(counterId);
+            if (!input || !counter) return;
+            const maxLength = inputId.includes('Result') || inputId.includes('textToDecrypt') ? 
+                CONFIG.MAX_ENCRYPTED_LENGTH : CONFIG.MAX_TEXT_LENGTH;
+            counter.textContent = `${input.value.length}/${maxLength}`;
+            counter.style.color = input.value.length > maxLength * 0.9 ? 
+                'var(--error-color)' : 'var(--text-secondary)';
+        }
 
-    const encryptFiles = async () => {
-      if (isProcessing || !window.JSZip) {
-        showError('encrypt', 'Encryption unavailable: JSZip library missing.');
-        return;
-      }
-      toggleProcessing(true);
-      const passwordInput = document.getElementById('encrypt-password');
-      const passwordBytes = new TextEncoder().encode(passwordInput.value.slice(0, 128));
-      passwordInput.value = '';
-      if (!selectedEncryptFiles.length) {
-        secureWipe(passwordBytes);
-        showError('encrypt', 'Please select at least one file.');
-        toggleProcessing(false);
-        return;
-      }
-      if (!passwordBytes.length) {
-        secureWipe(passwordBytes);
-        showError('encrypt', 'Please enter a password.');
-        toggleProcessing(false);
-        return;
-      }
+        async function encryptText() {
+            const textInput = document.getElementById('textToEncrypt');
+            const passwordInput = document.getElementById('passwordEncrypt');
+            const text = textInput.value.trim();
+            const password = passwordInput.value;
+            const errorEl = document.getElementById('encryptError');
+            const successEl = document.getElementById('encryptSuccess');
+            errorEl.textContent = '';
+            successEl.textContent = '';
 
-      updateProgress('encrypt', 'Creating archive...', 10);
+            if (!text) {
+                errorEl.textContent = 'Please enter text to encrypt.';
+                return;
+            }
+            if (!password) {
+                errorEl.textContent = 'Please enter a password.';
+                return;
+            }
+            if (password.length < CONFIG.MIN_PASSWORD_LENGTH) {
+                errorEl.textContent = `Password must be at least ${CONFIG.MIN_PASSWORD_LENGTH} characters.`;
+                return;
+            }
+            if (text.length > CONFIG.MAX_TEXT_LENGTH) {
+                errorEl.textContent = `Text exceeds ${CONFIG.MAX_TEXT_LENGTH} characters.`;
+                return;
+            }
 
-      try {
-        const zip = new JSZip();
-        selectedEncryptFiles.forEach(file => zip.file(file.name, file));
-        const zipped = await zip.generateAsync({ type: 'uint8array' }, ({ percent }) => {
-          updateProgress('encrypt', `Archiving: ${Math.round(percent)}%`, 10 + percent * 0.3);
+            toggleButtonLoading('encryptBtn', true);
+            toggleProgressBar(true);
+            try {
+                const encoder = new TextEncoder();
+                const data = new SecureBuffer(encoder.encode(text));
+                const iv = crypto.getRandomValues(new Uint8Array(CONFIG.IV_LENGTH));
+                const { key, salt } = await deriveKey(password);
+
+                const encrypted = await crypto.subtle.encrypt(
+                    { name: "AES-GCM", iv },
+                    key,
+                    data.buffer
+                );
+
+                const payload = {
+                    salt: arrayBufferToBase64(salt),
+                    iv: arrayBufferToBase64(iv),
+                    ciphertext: arrayBufferToBase64(encrypted)
+                };
+
+                const result = document.getElementById('encryptionResult');
+                result.value = btoa(JSON.stringify(payload));
+                document.getElementById('encryptBtnContainer').style.display = 'block';
+                updateCharCount('encryptionResult', 'encryptResultCharCount');
+                successEl.textContent = 'Encryption successful!';
+                showToast('Encryption successful!', 'success');
+                data.wipe();
+            } catch (error) {
+                errorEl.textContent = `Encryption failed: ${error.message}`;
+                showToast('Encryption failed!', 'error');
+            } finally {
+                toggleButtonLoading('encryptBtn', false);
+                toggleProgressBar(false);
+                passwordInput.value = '';
+                passwordInput.type = 'password';
+                document.querySelector('#encryptTab .show-password').textContent = 'Show';
+            }
+        }
+
+        async function decryptText() {
+            if (isDecryptLocked) {
+                showToast('Too many failed attempts. Please wait.', 'error');
+                return;
+            }
+
+            const encryptedTextInput = document.getElementById('textToDecrypt');
+            const passwordInput = document.getElementById('passwordDecrypt');
+            const encryptedText = encryptedTextInput.value.trim();
+            const password = passwordInput.value;
+            const errorEl = document.getElementById('decryptError');
+            const successEl = document.getElementById('decryptSuccess');
+            errorEl.textContent = '';
+            successEl.textContent = '';
+
+            if (!encryptedText) {
+                errorEl.textContent = 'Please enter encrypted text.';
+                return;
+            }
+            if (!password) {
+                errorEl.textContent = 'Please enter a password.';
+                return;
+            }
+            if (password.length < CONFIG.MIN_PASSWORD_LENGTH) {
+                errorEl.textContent = `Password must be at least ${CONFIG.MIN_PASSWORD_LENGTH} characters.`;
+                return;
+            }
+            if (encryptedText.length > CONFIG.MAX_ENCRYPTED_LENGTH) {
+                errorEl.textContent = `Encrypted text exceeds ${CONFIG.MAX_ENCRYPTED_LENGTH} characters.`;
+                return;
+            }
+
+            toggleButtonLoading('decryptBtn', true);
+            toggleProgressBar(true);
+            try {
+                let payload;
+                try {
+                    payload = JSON.parse(atob(encryptedText));
+                    if (!payload.salt || !payload.iv || !payload.ciphertext ||
+                        typeof payload.salt !== 'string' ||
+                        typeof payload.iv !== 'string' ||
+                        typeof payload.ciphertext !== 'string') {
+                        throw new Error('Invalid payload structure.');
+                    }
+                } catch {
+                    throw new Error('Invalid encrypted text format.');
+                }
+
+                const salt = base64ToArrayBuffer(payload.salt);
+                const iv = base64ToArrayBuffer(payload.iv);
+                const ciphertext = base64ToArrayBuffer(payload.ciphertext);
+
+                if (salt.buffer.length !== CONFIG.SALT_LENGTH || iv.buffer.length !== CONFIG.IV_LENGTH) {
+                    throw new Error('Invalid salt or IV length.');
+                }
+
+                const { key } = await deriveKey(password, salt.buffer);
+                const decrypted = await crypto.subtle.decrypt(
+                    { name: "AES-GCM", iv: iv.buffer },
+                    key,
+                    ciphertext.buffer
+                );
+
+                const result = document.getElementById('decryptionResult');
+                result.value = new TextDecoder().decode(decrypted);
+                document.getElementById('decryptBtnContainer').style.display = 'block';
+                updateCharCount('decryptionResult', 'decryptResultCharCount');
+                decryptFailCount = 0;
+                successEl.textContent = 'Decryption successful!';
+                showToast('Decryption successful!', 'success');
+
+                [salt, iv, ciphertext].forEach(buf => buf.wipe());
+            } catch (error) {
+                decryptFailCount++;
+                errorEl.textContent = `Decryption failed: ${error.message}`;
+                showToast(`Decryption failed: ${error.message}`, 'error');
+                if (decryptFailCount >= CONFIG.DECRYPT_FAIL_LIMIT) {
+                    isDecryptLocked = true;
+                    let remaining = CONFIG.DECRYPT_LOCKOUT_MS / 1000;
+                    showToast(`Locked for ${remaining} seconds.`, 'error');
+                    const countdown = setInterval(() => {
+                        remaining--;
+                        if (remaining <= 0) {
+                            clearInterval(countdown);
+                            isDecryptLocked = false;
+                            decryptFailCount = 0;
+                            errorEl.textContent = '';
+                            showToast('Decryption unlocked', 'success');
+                            toggleButtonLoading('decryptBtn', false);
+                        } else {
+                            showToast(`Locked for ${remaining} seconds.`, 'error');
+                        }
+                    }, 1000);
+                }
+            } finally {
+                toggleButtonLoading('decryptBtn', isDecryptLocked);
+                toggleProgressBar(false);
+                passwordInput.value = '';
+                passwordInput.type = 'password';
+                document.querySelector('#decryptTab .show-password').textContent = 'Show';
+            }
+        }
+
+        async function copyToClipboard(elementId) {
+            const textArea = document.getElementById(elementId);
+            const copyBtn = document.getElementById(`${elementId === 'encryptionResult' ? 'encrypt' : 'decrypt'}CopyBtn`);
+            if (!textArea.value) {
+                showToast('No text to copy.', 'error');
+                return;
+            }
+            toggleButtonLoading(copyBtn.id, true);
+            try {
+                await navigator.clipboard.writeText(textArea.value);
+                showToast('Copied to clipboard!', 'success');
+                setTimeout(async () => {
+                    try {
+                        await navigator.clipboard.writeText('');
+                    } catch {
+                        // Silent fail
+                    }
+                }, CONFIG.CLIPBOARD_CLEAR_TIMEOUT);
+            } catch {
+                showToast('Failed to copy. Please copy manually.', 'error');
+                textArea.select();
+            } finally {
+                toggleButtonLoading(copyBtn.id, false);
+            }
+        }
+
+        function togglePassword(inputId) {
+            const input = document.getElementById(inputId);
+            const button = input.nextElementSibling;
+            input.type = input.type === 'password' ? 'text' : 'password';
+            button.textContent = input.type === 'password' ? 'Show' : 'Hide';
+            input.focus();
+        }
+
+        function showTab(tabId) {
+            if (tabId === activeTab) return;
+            activeTab = tabId;
+
+            // Clear all fields and states
+            ['textToEncrypt', 'passwordEncrypt', 'textToDecrypt', 'passwordDecrypt', 
+             'encryptionResult', 'decryptionResult'].forEach拍照
+
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+                tab.setAttribute('hidden', '');
+                const resultArea = tab.querySelector('textarea[readonly]');
+                if (resultArea) resultArea.value = '';
+                const btnContainer = tab.querySelector('.btn-container');
+                if (btnContainer) btnContainer.style.display = 'none';
+                const errorEl = tab.querySelector('.error');
+                if (errorEl) errorEl.textContent = '';
+                const successEl = tab.querySelector('.success');
+                if (successEl) successEl.textContent = '';
+            });
+
+            const selectedTab = document.getElementById(tabId);
+            if (selectedTab) {
+                selectedTab.classList.add('active');
+                selectedTab.removeAttribute('hidden');
+            }
+
+            document.querySelectorAll('.tab-buttons button').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.tab === tabId);
+            });
+
+            ['textToEncrypt', 'passwordEncrypt', 'textToDecrypt', 'passwordDecrypt'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.value = '';
+                    if (el.type === 'text') {
+                        el.type = 'password';
+                        const btn = el.nextElementSibling;
+                        if (btn) btn.textContent = 'Show';
+                    }
+                    updateCharCount(id, `${id.includes('Result') ? id : id.replace('textTo', '')}CharCount`);
+                }
+            });
+
+            ['encryptPasswordStrength', 'decryptPasswordStrength'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = '';
+            });
+
+            decryptFailCount = 0;
+            isDecryptLocked = false;
+            toggleButtonLoading('decryptBtn', false);
+            document.getElementById(tabId).querySelector('textarea').focus();
+        }
+
+        function sanitizeInput(input) {
+            return input.replace(/[<>]/g, '').replace(/[\x00-\x1F\x7F]/g, '');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!crypto?.subtle || !crypto.getRandomValues) {
+                showToast('This browser does not support secure cryptography.', 'error');
+                document.querySelectorAll('.btn').forEach(btn => btn.disabled = true);
+                return;
+            }
+
+            const inputs = ['textToEncrypt', 'textToDecrypt', 'encryptionResult', 'decryptionResult', 
+                           'passwordEncrypt', 'passwordDecrypt'];
+            inputs.forEach(id => {
+                const input = document.getElementById(id);
+                if (input) {
+                    input.addEventListener('input', debounce(() => {
+                        input.value = sanitizeInput(input.value);
+                        updateCharCount(id, `${id.includes('Result') ? id : id.replace('textTo', '')}CharCount`);
+                        if (id.includes('password')) {
+                            updatePasswordStrength(id, `${id}Strength`);
+                        }
+                    }, CONFIG.DEBOUNCE_MS));
+                    updateCharCount(id, `${id.includes('Result') ? id : id.replace('textTo', '')}CharCount`);
+                }
+            });
+
+            // Keyboard navigation
+            document.querySelectorAll('.tab-buttons button').forEach((btn, index) => {
+                btn.addEventListener('keydown', (e) => {
+                    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+                        const nextIndex = e.key === 'ArrowRight' ? index + 1 : index - 1;
+                        const nextBtn = document.querySelectorAll('.tab-buttons button')[nextIndex];
+                        if (nextBtn) {
+                            nextBtn.focus();
+                            showTab(nextBtn.dataset.tab);
+                        }
+                    }
+                });
+            });
+
+            // Enter key handling
+            ['passwordEncrypt', 'passwordDecrypt'].forEach(id => {
+                const input = document.getElementById(id);
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const tab = id.includes('Encrypt') ? 'encryptBtn' : 'decryptBtn';
+                        document.getElementById(tab).click();
+                    }
+                });
+            });
+
+            showTab('encryptTab');
         });
-
-        updateProgress('encrypt', 'Encrypting...', 40);
-        const keyMaterial = await getKeyMaterial(passwordBytes);
-        const salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH));
-        const nonce = crypto.getRandomValues(new Uint8Array(NONCE_LENGTH));
-        const { encKey, hmacKey } = await deriveKeys(keyMaterial, salt);
-
-        const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce }, encKey, zipped);
-        updateProgress('encrypt', 'Computing integrity...', 80);
-        const encData = new Uint8Array(encrypted);
-        const hmacInput = new Uint8Array([...nonce, ...encData]);
-        const hmac = await computeHMAC(hmacKey, hmacInput);
-
-        updateProgress('encrypt', 'Finalizing...', 90);
-        const header = new TextEncoder().encode(FILE_FORMAT_VERSION);
-        const iterations = new Uint8Array(4);
-        new DataView(iterations.buffer).setUint32(0, PBKDF2_ITERATIONS, false);
-        const full = new Uint8Array(HEADER_LENGTH + encData.length + HMAC_LENGTH);
-        full.set(header, 0);
-        full.set(iterations, 4);
-        full.set(salt, 8);
-        full.set(nonce, 8 + SALT_LENGTH);
-        full.set(encData, HEADER_LENGTH);
-        full.set(hmac, HEADER_LENGTH + encData.length);
-
-        processedBlob = new Blob([full], { type: 'application/octet-stream' });
-        processedFileName = 'vault.ara';
-
-        updateProgress('encrypt', 'Encryption complete.', 100);
-        document.getElementById('encrypt-actions').classList.remove('hidden');
-
-        document.getElementById('encrypt-download').onclick = () => {
-          if (isProcessing) return;
-          const url = URL.createObjectURL(processedBlob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = processedFileName;
-          a.click();
-          URL.revokeObjectURL(url);
-        };
-
-        if (canShareFiles) {
-          document.getElementById('encrypt-share').onclick = async () => {
-            if (isProcessing) return;
-            const file = new File([processedBlob], processedFileName, { type: 'application/octet-stream' });
-            if (navigator.canShare({ files: [file] })) {
-              try {
-                await navigator.share({ files: [file], title: 'Lockara Vault', text: 'Share your encrypted file.' });
-              } catch (e) {
-                showError('encrypt', 'Sharing failed: ' + e.message);
-              }
-            }
-          };
-        }
-      } catch (e) {
-        showError('encrypt', `Encryption error: ${e.message}`);
-      } finally {
-        secureWipe(passwordBytes);
-        selectedEncryptFiles = [];
-        document.getElementById('encrypt-files-count').textContent = 'No files selected';
-        document.getElementById('encrypt-password-strength').textContent = '';
-        toggleProcessing(false);
-        setTimeout(() => updateProgress('encrypt', '', 0), 2000);
-      }
-    };
-
-    const decryptFile = async () => {
-      if (isProcessing || !window.JSZip) {
-        showError('decrypt', 'Decryption unavailable: JSZip library missing.');
-        return;
-      }
-      toggleProcessing(true);
-      const passwordInput = document.getElementById('decrypt-password');
-      const passwordBytes = new TextEncoder().encode(passwordInput.value.slice(0, 128));
-      passwordInput.value = '';
-      if (!selectedDecryptFile) {
-        secureWipe(passwordBytes);
-        showError('decrypt', 'Please select a .ara file.');
-        toggleProcessing(false);
-        return;
-      }
-      if (!passwordBytes.length) {
-        secureWipe(passwordBytes);
-        showError('decrypt', 'Please enter a password.');
-        toggleProcessing(false);
-        return;
-      }
-
-      updateProgress('decrypt', 'Reading file...', 10);
-
-      try {
-        const buffer = await selectedDecryptFile.arrayBuffer();
-        if (buffer.byteLength < HEADER_LENGTH + HMAC_LENGTH) {
-          throw new Error('Invalid .ara file: too small.');
-        }
-
-        const view = new DataView(buffer);
-        const header = new TextDecoder().decode(new Uint8Array(buffer, 0, 4));
-        if (header !== FILE_FORMAT_VERSION) {
-          throw new Error('Unsupported .ara file version.');
-        }
-
-        const iterations = view.getUint32(4, false);
-        if (iterations !== PBKDF2_ITERATIONS) {
-          throw new Error('Invalid iteration count in file.');
-        }
-
-        const salt = new Uint8Array(buffer, 8, SALT_LENGTH);
-        const nonce = new Uint8Array(buffer, 8 + SALT_LENGTH, NONCE_LENGTH);
-        const encData = new Uint8Array(buffer, HEADER_LENGTH, buffer.byteLength - HEADER_LENGTH - HMAC_LENGTH);
-        const hmac = new Uint8Array(buffer, buffer.byteLength - HMAC_LENGTH, HMAC_LENGTH);
-
-        updateProgress('decrypt', 'Processing key...', 30);
-        const keyMaterial = await getKeyMaterial(passwordBytes);
-        const { encKey, hmacKey } = await deriveKeys(keyMaterial, salt);
-
-        updateProgress('decrypt', 'Verifying integrity...', 50);
-        const hmacInput = new Uint8Array([...nonce, ...encData]);
-        if (!(await verifyHMAC(hmacKey, hmacInput, hmac))) {
-          throw new Error('File integrity check failed: possible tampering or wrong password.');
-        }
-
-        let decrypted;
-        try {
-          decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: nonce }, encKey, encData);
-        } catch (e) {
-          throw new Error('Invalid password or corrupted file.');
-        }
-
-        updateProgress('decrypt', 'Extracting archive...', 70);
-        const zip = await JSZip.loadAsync(decrypted);
-        const outputZip = new JSZip();
-        for (const name of Object.keys(zip.files)) {
-          const fileData = await zip.files[name].async('blob');
-          outputZip.file(name, fileData);
-        }
-
-        updateProgress('decrypt', 'Finalizing...', 90);
-        processedBlob = await outputZip.generateAsync({ type: 'blob' });
-        processedFileName = 'decrypted_files.zip';
-
-        updateProgress('decrypt', 'Decryption complete.', 100);
-        document.getElementById('decrypt-actions').classList.remove('hidden');
-
-        document.getElementById('decrypt-download').onclick = () => {
-          if (isProcessing) return;
-          const url = URL.createObjectURL(processedBlob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = processedFileName;
-          a.click();
-          URL.revokeObjectURL(url);
-        };
-
-        if (canShareFiles) {
-          document.getElementById('decrypt-share').onclick = async () => {
-            if (isProcessing) return;
-            const file = new File([processedBlob], processedFileName, { type: 'application/zip' });
-            if (navigator.canShare({ files: [file] })) {
-              try {
-                await navigator.share({ files: [file], title: 'Lockara Decrypted Files', text: 'Share your decrypted files.' });
-              } catch (e) {
-                showError('decrypt', 'Sharing failed: ' + e.message);
-              }
-            }
-          };
-        }
-      } catch (e) {
-        showError('decrypt', `Decryption error: ${e.message}`);
-      } finally {
-        secureWipe(passwordBytes);
-        selectedDecryptFile = null;
-        document.getElementById('decrypt-file-name').textContent = 'No file selected';
-        toggleProcessing(false);
-        setTimeout(() => updateProgress('decrypt', '', 0), 2000);
-      }
-    };
-
-    // Security Check
-    if (!crypto?.subtle) {
-      showError('encrypt', 'This device lacks required cryptographic support.');
-      toggleProcessing(true);
-    }
-
-    // PWA Service Worker
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js')
-          .then(reg => console.log('Service Worker registered:', reg.scope))
-          .catch(err => console.error('Service Worker registration failed:', err));
-      }, { passive: true });
-    }
-  </script>
+    </script>
 </body>
 </html>
